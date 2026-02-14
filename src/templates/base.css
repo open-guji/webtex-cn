@@ -76,8 +76,9 @@
   --wtc-proper-name-color: #333;
   --wtc-book-title-color: #333;
 
-  /* Page dimensions (computed from grid + borders + margins) */
-  --wtc-page-width: calc(var(--wtc-margin-left) + var(--wtc-margin-right) + var(--wtc-banxin-width) + 2 * (var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + 8px));
+  /* Half-page width: one set of columns + banxin + margins */
+  --wtc-half-content-width: calc(var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + 8px);
+  --wtc-page-width: calc(var(--wtc-margin-left) + var(--wtc-margin-right) + var(--wtc-banxin-width) + var(--wtc-half-content-width));
   --wtc-page-height: calc(var(--wtc-n-rows) * var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio)) + var(--wtc-margin-top) + var(--wtc-margin-bottom) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + var(--wtc-border-padding-top) + var(--wtc-border-padding-bottom));
 }
 
@@ -109,15 +110,23 @@
   overflow: visible;
 }
 
-/* ---- Spread (double page with banxin) ---- */
+/* ---- Spread (single half-page with banxin) ---- */
 .wtc-spread {
   display: flex;
-  flex-direction: row-reverse;
-  /* Right half first (traditional reading order) */
   width: 100%;
   height: var(--wtc-page-height);
   padding: var(--wtc-margin-top) var(--wtc-margin-right) var(--wtc-margin-bottom) var(--wtc-margin-left);
   position: relative;
+}
+
+/* Right half: content on right, banxin on left */
+.wtc-spread-right {
+  flex-direction: row-reverse;
+}
+
+/* Left half: banxin on right, content on left */
+.wtc-spread-left {
+  flex-direction: row;
 }
 
 /* ---- Half Page ---- */

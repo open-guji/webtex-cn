@@ -130,18 +130,19 @@ ${content}
   // =====================================================================
 
   /**
-   * Render a LayoutResult into multi-page HTML.
-   * Each page becomes one wtc-page div with a complete spread.
-   *
-   * @param {object} layoutResult  Output of layout()
-   * @returns {string[]} Array of page HTML strings (one per page)
-   */
+ * Render a LayoutResult into multi-page HTML.
+ * Each layout page is split into two visual half-pages, each with its own banxin.
+ *
+ * @param {object} layoutResult  Output of layout()
+ * @returns {string[]} Array of page HTML strings (two per layout page)
+ */
   renderFromLayout(layoutResult) {
     const setupStyles = this.getSetupStylesFromCommands(layoutResult.meta.setupCommands);
     const banxin = this.renderBanxinFromMeta(layoutResult.meta);
 
     let carryStack = []; // marker stack carried across pages
-    return layoutResult.pages.map(page => {
+    const pages = [];
+    for (const page of layoutResult.pages) {
       const boundary = page.halfBoundary ?? page.items.length;
       const rightItems = page.items.slice(0, boundary);
       const leftItems = page.items.slice(boundary);
@@ -154,10 +155,17 @@ ${content}
       const leftHTML = left.html;
       const floatsHTML = page.floats.map(f => this.renderNode(f)).join('\n');
 
-      return `<div class="wtc-spread"${setupStyles}>
-${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">${rightHTML}</div></div></div>${banxin}<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content">${leftHTML}</div></div></div>
-</div>`;
-    });
+      // Right half-page: content on right, banxin on left
+      pages.push(`<div class="wtc-spread wtc-spread-right"${setupStyles}>
+${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">${rightHTML}</div></div></div>${banxin}
+</div>`);
+
+      // Left half-page: content on left, banxin on right
+      pages.push(`<div class="wtc-spread wtc-spread-left"${setupStyles}>
+<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content">${leftHTML}</div></div></div>${banxin}
+</div>`);
+    }
+    return pages;
   }
 
   /**
