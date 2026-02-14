@@ -389,6 +389,7 @@
 .wtc-book-title-mark {
   text-decoration: underline wavy;
   text-decoration-color: var(--wtc-book-title-color);
+  text-decoration-thickness: 0.5px;
 }
 
 .wtc-inverted {
@@ -470,25 +471,25 @@
 
 /* 句 (ju): small circle ○ for 。？！ */
 .wtc-judou-ju::after {
-  content: '\25CB';
+  content: '\3002';
   position: absolute;
-  font-size: calc(var(--wtc-font-size) * 0.35);
+  font-size: calc(var(--wtc-font-size));
   line-height: 1;
   /* In vertical-rl: left = toward reader (bottom-right of char visually) */
-  left: calc(var(--wtc-font-size) * 0.55);
-  top: calc(var(--wtc-font-size) * -0.35);
-  color: var(--wtc-font-color);
+  left: calc(var(--wtc-font-size) * -0.1);
+  top: calc(var(--wtc-font-size) * -0.3);
+  color: #c00;
 }
 
-/* 读 (dou): small dot ● for ，；、： */
+/* 读 (dou): 顿号 、 for ，；、： */
 .wtc-judou-dou::after {
-  content: '\25CF';
+  content: '\3001';
   position: absolute;
-  font-size: calc(var(--wtc-font-size) * 0.25);
+  font-size: calc(var(--wtc-font-size) * 1);
   line-height: 1;
-  left: calc(var(--wtc-font-size) * 0.6);
-  top: calc(var(--wtc-font-size) * -0.25);
-  color: var(--wtc-font-color);
+  left: calc(var(--wtc-font-size) * -0.1);
+  top: calc(var(--wtc-font-size) * -0.3);
+  color: #c00;
 }
 
 /* Paired punctuation: hidden in judou mode */
