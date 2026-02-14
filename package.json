@@ -1,6 +1,6 @@
 {
   "name": "webtex-cn",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Convert luatex-cn TeX files to HTML+CSS for vertical Chinese typesetting on the web",
   "type": "module",
   "main": "src/index.js",
