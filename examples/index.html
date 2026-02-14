@@ -89,14 +89,78 @@
 
     .preview-panel {
       flex: 1;
-      overflow: auto;
+      overflow: hidden;
+      /* Changed from auto to hidden for paging */
       padding: 20px;
       background: #e8e8e8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
     }
 
     #webtex-container {
       display: inline-block;
-      transform-origin: top left;
+      transform-origin: top center;
+      flex: 1;
+      overflow: auto;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* Paging styles */
+    .wtc-page {
+      display: none !important;
+      margin-bottom: 20px;
+    }
+
+    .wtc-page.active-page {
+      display: block !important;
+    }
+
+    .pager-bar {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .pager-bar button {
+      padding: 4px 12px;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .pager-bar button:hover {
+      background: #f0f0f0;
+    }
+
+    .pager-bar button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pager-bar input {
+      width: 40px;
+      text-align: center;
+      padding: 2px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .pager-info {
+      font-size: 13px;
+      color: #666;
     }
 
     .status-bar {
@@ -116,8 +180,8 @@
     <label>文件:
       <select id="tex-select">
         <option value="minimal.tex">最小示例</option>
-        <option value="shiji.tex" selected>史记五帝本纪</option>
-        <option value="sikuanmulu.tex">四庫全書簡明目錄</option>
+        <option value="shiji.tex">史记五帝本纪</option>
+        <option value="sikuanmulu.tex" selected>四庫全書簡明目錄</option>
         <option value="honglou.tex">红楼梦甲戌本</option>
         <option value="showcase.tex">全功能展示</option>
       </select>
@@ -138,6 +202,13 @@
     </div>
     <div class="preview-panel" id="preview-panel">
       <div id="webtex-container" class="wtc-scope"></div>
+      <div class="pager-bar">
+        <button id="btn-prev">上一页</button>
+        <div class="pager-info">
+          第 <input type="text" id="page-input" value="1"> / <span id="page-total">1</span> 页
+        </div>
+        <button id="btn-next">下一页</button>
+      </div>
     </div>
   </div>
 
@@ -146,7 +217,6 @@
   <script type="module">
     import { renderToDOM } from '../src/index.js';
 
-
     const texSource = document.getElementById('tex-source');
     const container = document.getElementById('webtex-container');
     const previewPanel = document.getElementById('preview-panel');
@@ -154,16 +224,35 @@
     const texSelect = document.getElementById('tex-select');
     const templateSelect = document.getElementById('template-select');
 
-    let renderTimer = null;
+    // Pager elements
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const pageInput = document.getElementById('page-input');
+    const pageTotal = document.getElementById('page-total');
 
-    function renderPreview() {
+    let renderTimer = null;
+    let currentPage = 1;
+    let totalPages = 1;
+
+    function renderPreview(maintainPage = true) {
       const source = texSource.value;
       if (!source.trim()) {
         container.innerHTML = '';
+        updatePager(0);
         return;
       }
       try {
         renderToDOM(source, container);
+        const pages = container.querySelectorAll('.wtc-page');
+        totalPages = pages.length;
+
+        if (maintainPage) {
+          currentPage = Math.min(currentPage, totalPages || 1);
+        } else {
+          currentPage = 1;
+        }
+
+        updatePager(currentPage);
         updateScale();
         status.textContent = '渲染完成';
       } catch (err) {
@@ -172,24 +261,59 @@
       }
     }
 
+    function updatePager(page) {
+      if (page < 1 && totalPages > 0) page = 1;
+      currentPage = page;
 
+      const pages = container.querySelectorAll('.wtc-page');
+      pages.forEach((p, i) => {
+        if (i === currentPage - 1) p.classList.add('active-page');
+        else p.classList.remove('active-page');
+      });
 
+      pageInput.value = currentPage;
+      pageTotal.textContent = totalPages;
+      btnPrev.disabled = currentPage <= 1;
+      btnNext.disabled = currentPage >= totalPages;
+
+      updateUrl();
+      updateScale();
+    }
+
+    function updateUrl() {
+      const url = new URL(window.location);
+      if (currentPage > 1) {
+        url.searchParams.set('page', currentPage);
+      } else {
+        url.searchParams.delete('page');
+      }
+      window.history.replaceState({}, '', url);
+    }
+
+    function initFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const p = parseInt(params.get('page'), 10);
+      if (!isNaN(p) && p > 0) {
+        currentPage = p;
+      }
+    }
 
     function debouncedRender() {
       clearTimeout(renderTimer);
-      renderTimer = setTimeout(renderPreview, 300);
+      renderTimer = setTimeout(() => renderPreview(true), 300);
     }
 
     function updateScale() {
-      var pages = container.querySelectorAll('.wtc-page');
-      if (!pages.length) return;
-      pages.forEach(function (p) { p.style.zoom = ''; });
-      requestAnimationFrame(function () {
-        var panelWidth = previewPanel.clientWidth - 40;
-        var pageWidth = pages[0].offsetWidth;
+      const activePage = container.querySelector('.wtc-page.active-page');
+      if (!activePage) return;
+
+      activePage.style.zoom = '';
+      requestAnimationFrame(() => {
+        const panelWidth = previewPanel.clientWidth - 40;
+        const pageWidth = activePage.offsetWidth;
         if (pageWidth > panelWidth && pageWidth > 0) {
-          var scale = panelWidth / pageWidth;
-          pages.forEach(function (p) { p.style.zoom = scale; });
+          const scale = panelWidth / pageWidth;
+          activePage.style.zoom = scale;
         }
       });
     }
@@ -200,7 +324,7 @@
         const response = await fetch(filename);
         if (!response.ok) throw new Error('HTTP ' + response.status);
         texSource.value = await response.text();
-        renderPreview();
+        renderPreview(currentPage > 1); // Maintain page if we came from URL
       } catch (err) {
         status.textContent = '错误: ' + err.message;
         console.error(err);
@@ -211,21 +335,39 @@
       const link = document.getElementById('template-css');
       link.href = '../src/templates/' + name + '.css';
       link.onload = function () {
-        renderPreview();
+        renderPreview(true);
       };
     }
 
     // Event listeners
     texSource.addEventListener('input', debouncedRender);
-    texSelect.addEventListener('change', function () { loadTeX(texSelect.value); });
+    texSelect.addEventListener('change', function () {
+      currentPage = 1;
+      loadTeX(texSelect.value);
+    });
     templateSelect.addEventListener('change', function () { switchTemplate(templateSelect.value); });
+
+    btnPrev.addEventListener('click', () => updatePager(currentPage - 1));
+    btnNext.addEventListener('click', () => updatePager(currentPage + 1));
+    pageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const p = parseInt(pageInput.value, 10);
+        if (!isNaN(p) && p >= 1 && p <= totalPages) {
+          updatePager(p);
+        } else {
+          pageInput.value = currentPage;
+        }
+      }
+    });
 
     // Re-scale on resize
     new ResizeObserver(function () { updateScale(); }).observe(previewPanel);
 
-    // Auto-load default file
-    texSelect.value = 'sikuanmulu.tex';
-    loadTeX('sikuanmulu.tex');
+    // Initialization
+    initFromUrl();
+    const defaultFile = 'sikuanmulu.tex';
+    texSelect.value = defaultFile;
+    loadTeX(defaultFile);
   </script>
 </body>
 
