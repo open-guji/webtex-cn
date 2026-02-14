@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebTeX-CN 示例</title>
+<link rel="stylesheet" href="../src/templates/base.css">
+<link id="template-css" rel="stylesheet" href="../src/templates/siku-quanshu.css">
+<style>
+  .controls {
+    text-align: center;
+    padding: 20px;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .controls h1 {
+    font-size: 20px;
+    margin-bottom: 12px;
+    color: #333;
+  }
+  .controls select, .controls button {
+    font-size: 14px;
+    padding: 6px 14px;
+    margin: 0 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .controls button:hover { background: #e8e8e8; }
+  .controls label {
+    font-size: 14px;
+    margin: 0 8px;
+    color: #555;
+  }
+  #status {
+    margin-top: 8px;
+    color: #888;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="controls">
+  <h1>WebTeX-CN 竖排古籍演示</h1>
+  <label>TeX 文件:
+    <select id="tex-select">
+      <option value="minimal.tex">最小示例</option>
+      <option value="shiji.tex" selected>史记五帝本纪</option>
+      <option value="honglou.tex">红楼梦甲戌本</option>
+      <option value="showcase.tex">全功能展示</option>
+    </select>
+  </label>
+  <label>模板:
+    <select id="template-select">
+      <option value="siku-quanshu" selected>四库全书 (黑白)</option>
+      <option value="siku-quanshu-colored">四库全书 (彩色)</option>
+      <option value="honglou">红楼梦甲戌本</option>
+      <option value="minimal">极简</option>
+    </select>
+  </label>
+  <button onclick="loadSelected()">加载</button>
+  <div id="status">就绪</div>
+</div>
+
+<div id="webtex-container"></div>
+
+<script type="module">
+import { renderToDOM } from '../src/index.js';
+
+async function loadTeX(filename) {
+  const status = document.getElementById('status');
+  status.textContent = `加载 ${filename} 中...`;
+
+  try {
+    const response = await fetch(filename);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const texSource = await response.text();
+
+    renderToDOM(texSource, '#webtex-container');
+    status.textContent = `已加载: ${filename}`;
+  } catch (err) {
+    status.textContent = `错误: ${err.message}`;
+    console.error(err);
+  }
+}
+
+function switchTemplate(name) {
+  const link = document.getElementById('template-css');
+  link.href = `../src/templates/${name}.css`;
+}
+
+// Expose to global for onclick
+window.loadSelected = function() {
+  const texSelect = document.getElementById('tex-select');
+  const templateSelect = document.getElementById('template-select');
+  switchTemplate(templateSelect.value);
+  loadTeX(texSelect.value);
+};
+
+// Template change listener
+document.getElementById('template-select').addEventListener('change', function() {
+  switchTemplate(this.value);
+});
+
+// Auto-load on page ready
+loadTeX('shiji.tex');
+</script>
+</body>
+</html>

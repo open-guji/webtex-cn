@@ -1,0 +1,31 @@
+/* ========================================
+   四库全书彩色版 (Siku Quanshu Colored)
+   Traditional warm paper tone with colored borders
+   ======================================== */
+
+:root {
+  --wtc-page-width: 900px;
+  --wtc-page-height: 650px;
+  --wtc-margin-top: 55px;
+  --wtc-margin-bottom: 35px;
+  --wtc-margin-left: 45px;
+  --wtc-margin-right: 45px;
+
+  --wtc-font-size: 22px;
+  --wtc-line-height: 1.9;
+  --wtc-font-color: rgb(35, 25, 20);
+
+  --wtc-border-thickness: 0.5px;
+  --wtc-border-color: rgb(180, 95, 75);
+  --wtc-outer-border-thickness: 3px;
+  --wtc-outer-border-sep: 3px;
+  --wtc-border-padding-top: 6px;
+  --wtc-border-padding-bottom: 6px;
+
+  --wtc-page-background: rgb(222, 188, 130);
+
+  --wtc-sidenote-color: #c00;
+  --wtc-meipi-color: #c00;
+  --wtc-pizhu-color: #c00;
+  --wtc-emphasis-color: #c00;
+}

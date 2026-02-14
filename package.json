@@ -1,0 +1,42 @@
+{
+  "name": "webtex-cn",
+  "version": "0.1.0",
+  "description": "Convert luatex-cn TeX files to HTML+CSS for vertical Chinese typesetting on the web",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "dist/webtex-cn.esm.js",
+  "browser": "dist/webtex-cn.js",
+  "bin": {
+    "webtex-cn": "bin/webtex-cn.js"
+  },
+  "files": [
+    "src/",
+    "dist/",
+    "bin/"
+  ],
+  "scripts": {
+    "build": "node build.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/ test/ bin/ build.js",
+    "format": "prettier --write src/ test/ bin/ build.js",
+    "format:check": "prettier --check src/ test/ bin/ build.js",
+    "dev": "npx serve examples"
+  },
+  "keywords": [
+    "tex",
+    "html",
+    "css",
+    "chinese",
+    "vertical-typesetting",
+    "ancient-books"
+  ],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "esbuild": "^0.27.3",
+    "eslint": "^10.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
+    "vitest": "^3.0.0"
+  }
+}

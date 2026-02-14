@@ -1,0 +1,79 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Snapshot: example files > honglou.tex renders consistently 1`] = `
+"<br class="wtc-paragraph-break"><div class="wtc-spread">
+<div class="wtc-pizhu" style="right: 3cm;top: 1cm;">甲戌眉批：開卷一篇立意真打破歷來小說窠臼</div><div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content"><br class="wtc-paragraph-break">脂硯齋重評石頭記<br class="wtc-paragraph-break"><div class="wtc-list"><div class="wtc-list-item">甲戌本
+ </div><div class="wtc-list-item">第一回
+</div></div><br class="wtc-paragraph-break"><span class="wtc-paragraph" style="--wtc-indent: 2">
+此開卷第一回也作者自云曾歷過一番夢幻之後故將真事隱去而借通靈說此<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">石頭</span><span class="wtc-jiazhu-col">記</span></span>一段故事也
+</span><br class="wtc-paragraph-break">列位看官你道此書從何而來說起根由雖近荒唐細按則深有趣味<br class="wtc-paragraph-break"><span class="wtc-sidenote">此是第一首標題詩</span><br class="wtc-paragraph-break">待在下將此來歷註明方使閱者了然不惑<br class="wtc-newline">
+當日地陷東南<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">洪荒之世女媧氏</span><span class="wtc-jiazhu-col">煉石補天之時</span></span>這東南一隅有處曰姑蘇<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">有城曰閶門者最是紅塵</span><span class="wtc-jiazhu-col">中一二等富貴風流之地</span></span><br class="wtc-paragraph-break"><span class="wtc-sidenote">妙</span><br class="wtc-paragraph-break">這閶門外有個十里街街內有個仁清巷巷內有個古廟因地方窄狹人皆呼作葫蘆廟<br class="wtc-newline">
+廟旁住著一家鄉宦姓甄名費字士隱<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">真事</span><span class="wtc-jiazhu-col">隱也</span></span>嫡妻封氏情性賢淑深明禮義<br class="wtc-paragraph-break"><span class="wtc-emphasis">家中雖不甚富</span>然本地也推他為望族了<br class="wtc-paragraph-break"><span class="wtc-proper-name">甄士隱</span>禀性恬淡不以功名為念每日只以觀花修竹酌酒吟詩為樂<br class="wtc-newline">
+倒是神仙一流人品<br class="wtc-paragraph-break"><span class="wtc-book-title-mark">石頭記</span>是中國四大名著之一<br class="wtc-paragraph-break"><span class="wtc-inverted">卷一</span><br class="wtc-paragraph-break"><br class="wtc-paragraph-break"></div></div></div><div class="wtc-banxin">
+  <div class="wtc-banxin-section wtc-banxin-upper"><div class="wtc-yuwei wtc-yuwei-upper"></div></div>
+  <div class="wtc-banxin-section wtc-banxin-middle">
+    <span class="wtc-banxin-book-name">脂硯齋重評石頭記</span>
+    <span class="wtc-banxin-chapter">第一回</span>
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-lower"><div class="wtc-yuwei wtc-yuwei-lower"></div></div>
+</div><div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"></div></div></div>
+</div>"
+`;
+
+exports[`Snapshot: example files > minimal.tex renders consistently 1`] = `
+"<br class="wtc-paragraph-break"><div class="wtc-spread">
+<div class="wtc-pizhu" style="right: 5cm;top: 2cm;">可在任意位置书写批注</div><div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">
+這是古籍竖排的示例，包含夹注<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">长夹注自动换列，并且自动</span><span class="wtc-jiazhu-col">平衡，右列可能多一个字</span></span>的功能演示。<br class="wtc-newline">
+空格需手动声明　　可加入参数。<br class="wtc-paragraph-break"><span class="wtc-paragraph" style="--wtc-indent: 2">
+ 天地玄黃<br class="wtc-newline">
+ 宇宙洪荒
+</span><br class="wtc-paragraph-break">侧批<span class="wtc-sidenote">较长侧批可换列</span>可在任意位置插入。<br class="wtc-paragraph-break"><br class="wtc-paragraph-break"></div></div></div><div class="wtc-banxin">
+  <div class="wtc-banxin-section wtc-banxin-upper"><div class="wtc-yuwei wtc-yuwei-upper"></div></div>
+  <div class="wtc-banxin-section wtc-banxin-middle">
+    <span class="wtc-banxin-book-name">欽定四庫全書</span>
+    <span class="wtc-banxin-chapter">史記\\\\卷一</span>
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-lower"><div class="wtc-yuwei wtc-yuwei-lower"></div></div>
+</div><div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"></div></div></div>
+</div>"
+`;
+
+exports[`Snapshot: example files > shiji.tex renders consistently 1`] = `
+"<br class="wtc-paragraph-break"><div class="wtc-spread">
+<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content"><br class="wtc-paragraph-break">欽定四庫全書<br class="wtc-paragraph-break"><div class="wtc-list"><div class="wtc-list-item">史記卷一
+ </div><div class="wtc-list-item">五帝本紀第一
+</div></div><br class="wtc-paragraph-break"><span class="wtc-paragraph" style="--wtc-indent: 3"><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解裴駰曰凡是徐氏義稱徐姓名以别之餘者悉是駰註解并集衆家義索隠紀者記也本其事而記</span><span class="wtc-jiazhu-col">之故曰本紀又紀理也絲縷有紀而帝王書稱紀者言為後代綱紀也正義鄭玄注中候勅省圖云徳合</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">五帝坐星者稱帝又坤靈圖云</span><span class="wtc-jiazhu-col">徳配天地在正不在私曰帝</span></span></span><br class="wtc-paragraph-break">黄帝者<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解徐廣曰號有熊索隠按有土徳之瑞土色黄故稱黄帝猶神農火徳王而稱炎帝然也此以黄帝為</span><span class="wtc-jiazhu-col">五帝之首蓋依大戴禮五帝徳又譙周宋均亦以為然而孔安國皇甫謐帝王代紀及孫氏註系本並以</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">伏犧神農黄帝為三皇少</span><span class="wtc-jiazhu-col">昊髙陽髙辛唐虞為五帝</span></span>少典之子<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解譙周曰有熊國君少典之子也皇甫謐曰有熊今河南新鄭是也索隠少典者諸</span><span class="wtc-jiazhu-col">侯國號非人名也又按國語云少典娶有蟜氏女而生炎帝然則炎帝亦少典之子</span></span>姓公孫名曰軒轅<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">索隠按皇甫謐云黄帝生於壽丘長於姬水因以為姓居軒轅</span><span class="wtc-jiazhu-col">之丘因以為名又以為號是本姓公孫長居姬水因改姓姬</span></span>生而神靈弱而能言<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">索隠弱謂幼弱时也盖未合能言</span><span class="wtc-jiazhu-col">之时而黄帝即言所以为神异也</span></span>幼而徇齊<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解徐廣曰墨</span><span class="wtc-jiazhu-col">子曰年踰十五</span></span><br class="wtc-paragraph-break"></div></div></div><div class="wtc-banxin">
+  <div class="wtc-banxin-section wtc-banxin-upper"><div class="wtc-yuwei wtc-yuwei-upper"></div></div>
+  <div class="wtc-banxin-section wtc-banxin-middle">
+    <span class="wtc-banxin-book-name">欽定四庫全書</span>
+    <span class="wtc-banxin-chapter">史記\\\\卷一</span>
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-lower"><div class="wtc-yuwei wtc-yuwei-lower"></div></div>
+</div><div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"></div></div></div>
+</div>"
+`;
+
+exports[`Snapshot: example files > showcase.tex renders consistently 1`] = `
+"<br class="wtc-paragraph-break"><div class="wtc-spread">
+<div class="wtc-pizhu" style="right: 3cm;top: 1cm;">页面任意位置的浮动批注</div><div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content"><br class="wtc-paragraph-break">功能展示<br class="wtc-paragraph-break"><div class="wtc-list"><div class="wtc-list-item">竖排排版
+ </div><div class="wtc-list-item">夹注与侧批
+ </div><div class="wtc-list-item">装饰与边框
+</div></div><br class="wtc-paragraph-break">基本竖排：天地玄黃宇宙洪荒日月盈昃辰宿列張<br class="wtc-newline">
+寒來暑往秋收冬藏閏餘成歲律呂調陽<br class="wtc-paragraph-break">夹注示例：黄帝者<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解徐廣曰號有熊索隠按有</span><span class="wtc-jiazhu-col">土徳之瑞土色黄故稱黄帝</span></span>少典之子<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解譙周曰有熊國君少典之子也</span><span class="wtc-jiazhu-col">皇甫謐曰有熊今河南新鄭是也</span></span>姓公孫名曰軒轅<br class="wtc-paragraph-break"><span class="wtc-paragraph" style="--wtc-indent: 2">
+段落缩进两格的效果<br class="wtc-newline">
+第二列也缩进
+</span><br class="wtc-paragraph-break">侧批：天子<span class="wtc-sidenote">此处为侧批</span>诸侯<span class="wtc-sidenote">又一侧批</span>卿大夫<br class="wtc-paragraph-break">装饰功能：
+<span class="wtc-emphasis">重要文字</span>需要圈点标注
+<span class="wtc-proper-name">司馬遷</span>为史记作者
+<span class="wtc-book-title-mark">史記</span>是纪传体通史<br class="wtc-paragraph-break">特殊文本框：
+<span class="wtc-inverted">卷一</span>为反白效果
+<span class="wtc-circled">壹</span>为带圈效果<br class="wtc-paragraph-break">空格　　　控制<br class="wtc-paragraph-break"><br class="wtc-paragraph-break"></div></div></div><div class="wtc-banxin">
+  <div class="wtc-banxin-section wtc-banxin-upper"><div class="wtc-yuwei wtc-yuwei-upper"></div></div>
+  <div class="wtc-banxin-section wtc-banxin-middle">
+    <span class="wtc-banxin-book-name">欽定四庫全書</span>
+    <span class="wtc-banxin-chapter">功能展示</span>
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-lower"><div class="wtc-yuwei wtc-yuwei-lower"></div></div>
+</div><div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"></div></div></div>
+</div>"
+`;
