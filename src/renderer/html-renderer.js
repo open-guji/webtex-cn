@@ -147,6 +147,7 @@ export class HTMLRenderer {
     const grid = templateGridConfig[this.templateId] || { nRows: 21, nCols: 8 };
     this.nRows = grid.nRows;
     this.nCols = grid.nCols;
+    this.currentIndent = 0; // tracks paragraph indent for jiazhu splitting
   }
 
   /**
@@ -348,9 +349,16 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
 
   renderParagraph(node) {
     const indent = parseInt(node.options?.indent || '0', 10);
-    // Use ideographic spaces (U+3000) for indent — flows naturally in vertical-rl
-    const spacer = indent > 0 ? '\u3000'.repeat(indent) : '';
-    return `<span class="wtc-paragraph">${spacer}${this.renderChildren(node.children)}</span>`;
+    if (indent > 0) {
+      // Set indent context so jiazhu splits at (nRows - indent) chars per column
+      const prevIndent = this.currentIndent;
+      this.currentIndent = indent;
+      const inner = this.renderChildren(node.children);
+      this.currentIndent = prevIndent;
+      // Inline-block with reduced height: each column fits (n-rows - indent) chars.
+      return `<span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(${indent} * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - ${indent}) * var(--wtc-grid-height))">${inner}</span>`;
+    }
+    return `<span class="wtc-paragraph">${this.renderChildren(node.children)}</span>`;
   }
 
   renderJiazhu(node) {
@@ -378,7 +386,8 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
 
     const text = getPlainText(node.children);
     const align = node.options?.align || 'outward';
-    const segments = splitJiazhuMulti(text, this.nRows, align);
+    const maxPerCol = this.nRows - this.currentIndent;
+    const segments = splitJiazhuMulti(text, maxPerCol, align);
 
     return segments.map(({ col1, col2 }) =>
       `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${escapeHTML(col1)}</span><span class="wtc-jiazhu-col">${escapeHTML(col2)}</span></span>`

@@ -13,7 +13,8 @@
 
   --wtc-font-size: 22px;
   --wtc-line-height: 1.8;
-  --wtc-letter-spacing: 0.02em;
+  --wtc-letter-spacing-ratio: 0.02;
+  --wtc-letter-spacing: calc(var(--wtc-letter-spacing-ratio) * 1em);
   --wtc-font-color: #1a1a1a;
 
   --wtc-border-thickness: 0.4px;

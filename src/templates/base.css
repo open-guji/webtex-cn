@@ -15,13 +15,14 @@
 
   /* Grid (derived from font-size × line-height) */
   --wtc-grid-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
-  --wtc-grid-height: var(--wtc-font-size);
+  --wtc-grid-height: calc(var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio)));
 
   /* Typography */
   --wtc-font-family: "Noto Serif SC", "Source Han Serif SC", "SimSun", "宋体", serif;
   --wtc-font-size: 22px;
   --wtc-line-height: 1.9;
-  --wtc-letter-spacing: 0.05em;
+  --wtc-letter-spacing-ratio: 0.05;
+  --wtc-letter-spacing: calc(var(--wtc-letter-spacing-ratio) * 1em);
   --wtc-font-color: #1a1a1a;
 
   /* Border */
@@ -36,9 +37,13 @@
   /* Background */
   --wtc-page-background: #fff;
 
-  /* Jiazhu: same char height as main text, 2 sub-columns fit in 1 main column.
-     Each sub-column width = font-size × (line-height/2), so 2 cols = 1 main col. */
-  --wtc-jiazhu-font-size: 1em;
+  /* Jiazhu: visually smaller chars but same grid-cell height as main text.
+     font-size < 1em for smaller glyphs; letter-spacing compensates to match grid height.
+     Grid height per char = font-size × (1 + ls-ratio). Jiazhu needs same total.
+     jiazhu-ls = (grid-height - jiazhu-font-size) = font-size×(1+ls-ratio) - font-size×0.85
+               = font-size × (0.15 + ls-ratio).  In em: (0.15+ls-ratio)/0.85 */
+  --wtc-jiazhu-font-size: 0.85em;
+  --wtc-jiazhu-letter-spacing: calc((0.15 + var(--wtc-letter-spacing-ratio)) / 0.85 * 1em);
   --wtc-jiazhu-line-height: calc(var(--wtc-line-height) / 2);
   --wtc-jiazhu-color: inherit;
   --wtc-jiazhu-gap: 0px;
@@ -79,7 +84,7 @@
            + 2 * var(--wtc-border-thickness) + 8px)
   );
   --wtc-page-height: calc(
-    var(--wtc-n-rows) * var(--wtc-font-size)
+    var(--wtc-n-rows) * var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio))
     + var(--wtc-margin-top) + var(--wtc-margin-bottom)
     + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep)
     + 2 * var(--wtc-border-thickness)
@@ -155,14 +160,14 @@ body {
   color: var(--wtc-font-color);
   height: 100%;
   overflow: hidden;
-  /* 乌丝栏: inner column border lines */
+  /* 乌丝栏: inner column border lines via background-size for reliable rendering */
   --wtc-col-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
   background-origin: content-box;
   background-image: repeating-linear-gradient(
     to left,
     transparent 0,
-    transparent calc(var(--wtc-col-width) - var(--wtc-border-thickness)),
-    var(--wtc-border-color) calc(var(--wtc-col-width) - var(--wtc-border-thickness)),
+    transparent calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
+    var(--wtc-border-color) calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
     var(--wtc-border-color) var(--wtc-col-width)
   );
 }
@@ -229,10 +234,22 @@ body {
 }
 
 /* ---- Paragraph (段落) ---- */
-/* display:inline so paragraph flows with surrounding text.
-   Indent is handled by ideographic spaces in the renderer. */
+/* display:inline so paragraph flows with surrounding text. */
 .wtc-paragraph {
   display: inline;
+}
+
+/* Indented paragraph: inline-block with explicit reduced height.
+   height = (n-rows - indent) × grid-height, so each column fits exactly that many chars.
+   margin-inline-start (= margin-top in vertical-rl) pushes the block down to create
+   the visual indent gap at the top of the first column. */
+.wtc-paragraph-indent {
+  display: inline-block;
+  vertical-align: top;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  height: var(--wtc-paragraph-indent-height);
+  margin-inline-start: var(--wtc-paragraph-indent);
 }
 
 /* ---- Jiazhu (夹注) ---- */
@@ -243,6 +260,7 @@ body {
   flex-direction: column;
   vertical-align: top;
   font-size: var(--wtc-jiazhu-font-size);
+  letter-spacing: var(--wtc-jiazhu-letter-spacing);
   line-height: var(--wtc-jiazhu-line-height);
   color: var(--wtc-jiazhu-color);
   gap: var(--wtc-jiazhu-gap);
