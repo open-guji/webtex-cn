@@ -6,6 +6,14 @@
   "main": "src/index.js",
   "module": "dist/webtex-cn.esm.js",
   "browser": "dist/webtex-cn.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "bin": {
     "webtex-cn": "bin/webtex-cn.js"
   },
@@ -21,6 +29,7 @@
     "lint": "eslint src/ test/ bin/ build.js",
     "format": "prettier --write src/ test/ bin/ build.js",
     "format:check": "prettier --check src/ test/ bin/ build.js",
+    "prepublishOnly": "npm run build",
     "dev": "npx serve examples"
   },
   "keywords": [
@@ -32,6 +41,14 @@
     "ancient-books"
   ],
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/open-guji/webtex-cn.git"
+  },
+  "homepage": "https://github.com/open-guji/webtex-cn#readme",
+  "bugs": {
+    "url": "https://github.com/open-guji/webtex-cn/issues"
+  },
   "devDependencies": {
     "esbuild": "^0.27.3",
     "eslint": "^10.0.0",
