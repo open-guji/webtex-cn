@@ -5,17 +5,17 @@
 
 /* ---- CSS Variables (Defaults) ---- */
 :root {
-  /* Page */
-  --wtc-page-width: 900px;
-  --wtc-page-height: 680px;
+  /* Page grid: n-rows chars per column, n-cols columns per half-page */
+  --wtc-n-rows: 21;
+  --wtc-n-cols: 8;
   --wtc-margin-top: 60px;
   --wtc-margin-bottom: 40px;
   --wtc-margin-left: 50px;
   --wtc-margin-right: 50px;
 
-  /* Grid */
-  --wtc-grid-width: 42px;
-  --wtc-grid-height: 26px;
+  /* Grid (derived from font-size × line-height) */
+  --wtc-grid-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
+  --wtc-grid-height: var(--wtc-font-size);
 
   /* Typography */
   --wtc-font-family: "Noto Serif SC", "Source Han Serif SC", "SimSun", "宋体", serif;
@@ -70,6 +70,21 @@
   --wtc-emphasis-color: #c00;
   --wtc-proper-name-color: #333;
   --wtc-book-title-color: #333;
+
+  /* Page dimensions (computed from grid + borders + margins) */
+  --wtc-page-width: calc(
+    var(--wtc-margin-left) + var(--wtc-margin-right) + var(--wtc-banxin-width)
+    + 2 * (var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height)
+           + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep)
+           + 2 * var(--wtc-border-thickness) + 8px)
+  );
+  --wtc-page-height: calc(
+    var(--wtc-n-rows) * var(--wtc-font-size)
+    + var(--wtc-margin-top) + var(--wtc-margin-bottom)
+    + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep)
+    + 2 * var(--wtc-border-thickness)
+    + var(--wtc-border-padding-top) + var(--wtc-border-padding-bottom)
+  );
 }
 
 /* ---- Reset ---- */

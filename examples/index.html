@@ -7,47 +7,110 @@
 <link rel="stylesheet" href="../src/templates/base.css">
 <link id="template-css" rel="stylesheet" href="../src/templates/siku-quanshu.css">
 <style>
+  /* Override base.css body for demo app layout */
+  body {
+    background: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+
   .controls {
-    text-align: center;
-    padding: 20px;
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    background: #f5f5f5;
+    padding: 10px 20px;
+    background: #fff;
     border-bottom: 1px solid #ddd;
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
   }
+
   .controls h1 {
-    font-size: 20px;
-    margin-bottom: 12px;
+    font-size: 15px;
     color: #333;
+    margin: 0;
+    white-space: nowrap;
   }
-  .controls select, .controls button {
-    font-size: 14px;
-    padding: 6px 14px;
-    margin: 0 4px;
+
+  .controls select {
+    font-size: 13px;
+    padding: 4px 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
     background: #fff;
     cursor: pointer;
   }
-  .controls button:hover { background: #e8e8e8; }
+
   .controls label {
-    font-size: 14px;
-    margin: 0 8px;
+    font-size: 13px;
     color: #555;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
-  #status {
-    margin-top: 8px;
+
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .editor-panel {
+    width: 38%;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #ccc;
+    background: #1e1e1e;
+  }
+
+  .editor-panel textarea {
+    flex: 1;
+    resize: none;
+    border: none;
+    outline: none;
+    padding: 16px;
+    font-family: "Fira Code", "Consolas", "Monaco", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    tab-size: 2;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    white-space: pre;
+    overflow: auto;
+  }
+
+  .preview-panel {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+    background: #e8e8e8;
+  }
+
+  #webtex-container {
+    display: inline-block;
+    transform-origin: top left;
+  }
+
+  .status-bar {
+    padding: 4px 12px;
+    background: #f5f5f5;
+    border-top: 1px solid #ddd;
+    font-size: 11px;
     color: #888;
-    font-size: 12px;
+    flex-shrink: 0;
   }
 </style>
 </head>
 <body>
 <div class="controls">
-  <h1>WebTeX-CN 竖排古籍演示</h1>
-  <label>TeX 文件:
+  <h1>WebTeX-CN</h1>
+  <label>文件:
     <select id="tex-select">
       <option value="minimal.tex">最小示例</option>
       <option value="shiji.tex" selected>史记五帝本纪</option>
@@ -63,51 +126,95 @@
       <option value="minimal">极简</option>
     </select>
   </label>
-  <button onclick="loadSelected()">加载</button>
-  <div id="status">就绪</div>
 </div>
 
-<div id="webtex-container"></div>
+<div class="workspace">
+  <div class="editor-panel">
+    <textarea id="tex-source" spellcheck="false" placeholder="在此输入 TeX 源文件..."></textarea>
+  </div>
+  <div class="preview-panel" id="preview-panel">
+    <div id="webtex-container"></div>
+  </div>
+</div>
+
+<div class="status-bar" id="status">就绪</div>
 
 <script type="module">
 import { renderToDOM } from '../src/index.js';
 
-async function loadTeX(filename) {
-  const status = document.getElementById('status');
-  status.textContent = `加载 ${filename} 中...`;
+const texSource = document.getElementById('tex-source');
+const container = document.getElementById('webtex-container');
+const previewPanel = document.getElementById('preview-panel');
+const status = document.getElementById('status');
+const texSelect = document.getElementById('tex-select');
+const templateSelect = document.getElementById('template-select');
 
+let renderTimer = null;
+
+function renderPreview() {
+  const source = texSource.value;
+  if (!source.trim()) {
+    container.innerHTML = '';
+    return;
+  }
+  try {
+    renderToDOM(source, container);
+    updateScale();
+    status.textContent = '渲染完成';
+  } catch (err) {
+    status.textContent = '渲染错误: ' + err.message;
+    console.error(err);
+  }
+}
+
+function debouncedRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(renderPreview, 300);
+}
+
+function updateScale() {
+  const page = container.querySelector('.wtc-page');
+  if (!page) return;
+  page.style.zoom = '';
+  requestAnimationFrame(function () {
+    const panelWidth = previewPanel.clientWidth - 40;
+    const pageWidth = page.offsetWidth;
+    if (pageWidth > panelWidth && pageWidth > 0) {
+      page.style.zoom = panelWidth / pageWidth;
+    }
+  });
+}
+
+async function loadTeX(filename) {
+  status.textContent = '加载 ' + filename + '...';
   try {
     const response = await fetch(filename);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const texSource = await response.text();
-
-    renderToDOM(texSource, '#webtex-container');
-    status.textContent = `已加载: ${filename}`;
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    texSource.value = await response.text();
+    renderPreview();
   } catch (err) {
-    status.textContent = `错误: ${err.message}`;
+    status.textContent = '错误: ' + err.message;
     console.error(err);
   }
 }
 
 function switchTemplate(name) {
   const link = document.getElementById('template-css');
-  link.href = `../src/templates/${name}.css`;
+  link.href = '../src/templates/' + name + '.css';
+  link.onload = function () {
+    renderPreview();
+  };
 }
 
-// Expose to global for onclick
-window.loadSelected = function() {
-  const texSelect = document.getElementById('tex-select');
-  const templateSelect = document.getElementById('template-select');
-  switchTemplate(templateSelect.value);
-  loadTeX(texSelect.value);
-};
+// Event listeners
+texSource.addEventListener('input', debouncedRender);
+texSelect.addEventListener('change', function () { loadTeX(texSelect.value); });
+templateSelect.addEventListener('change', function () { switchTemplate(templateSelect.value); });
 
-// Template change listener
-document.getElementById('template-select').addEventListener('change', function() {
-  switchTemplate(this.value);
-});
+// Re-scale on resize
+new ResizeObserver(function () { updateScale(); }).observe(previewPanel);
 
-// Auto-load on page ready
+// Auto-load default file
 loadTeX('shiji.tex');
 </script>
 </body>

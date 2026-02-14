@@ -4,9 +4,8 @@
    ======================================== */
 
 :root {
-  /* Page: sized for ~17 columns (8+banxin+8 spread) × 21 rows */
-  --wtc-page-width: 860px;
-  --wtc-page-height: 600px;
+  --wtc-n-rows: 21;
+  --wtc-n-cols: 8;
   --wtc-margin-top: 50px;
   --wtc-margin-bottom: 30px;
   --wtc-margin-left: 40px;

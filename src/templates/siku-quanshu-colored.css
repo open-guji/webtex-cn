@@ -4,8 +4,8 @@
    ======================================== */
 
 :root {
-  --wtc-page-width: 900px;
-  --wtc-page-height: 650px;
+  --wtc-n-rows: 21;
+  --wtc-n-cols: 8;
   --wtc-margin-top: 55px;
   --wtc-margin-bottom: 35px;
   --wtc-margin-left: 45px;
