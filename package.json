@@ -4,8 +4,8 @@
   "description": "Convert luatex-cn TeX files to HTML+CSS for vertical Chinese typesetting on the web",
   "type": "module",
   "main": "src/index.js",
-  "module": "dist/webtex-cn.esm.js",
-  "browser": "dist/webtex-cn.js",
+  "module": "src/index.js",
+  "browser": "src/index.js",
   "exports": {
     ".": {
       "import": "./src/index.js",
