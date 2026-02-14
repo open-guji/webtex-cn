@@ -356,7 +356,6 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       }
 
       case NodeType.NEWLINE:
-        this.colPos = 0;
         return '<br class="wtc-newline">';
 
       case NodeType.MATH:

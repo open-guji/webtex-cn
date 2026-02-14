@@ -127,6 +127,9 @@ export class GridLayoutEngine {
     // Punctuation mode: 'normal', 'judou', 'none'
     this.punctMode = 'normal';
 
+    // Temporary flag to ignore paragraph indent for the current column (used by Taitou)
+    this.ignoreIndent = false;
+
     // Pages
     this.pages = [newPage()];
   }
@@ -136,7 +139,7 @@ export class GridLayoutEngine {
   }
 
   get effectiveRows() {
-    return this.nRows - this.currentIndent;
+    return this.nRows - (this.ignoreIndent ? 0 : this.currentIndent);
   }
 
   /**
@@ -154,6 +157,7 @@ export class GridLayoutEngine {
   advanceColumn() {
     this.currentCol++;
     this.currentRow = 0;
+    this.ignoreIndent = false; // Reset ignoreIndent when moving to a new column
     this.checkHalfBoundary();
     if (this.currentCol >= this.colsPerSpread) {
       this.newPageBreak();
@@ -253,7 +257,6 @@ export class GridLayoutEngine {
       case NodeType.NEWLINE:
       case NodeType.PARAGRAPH_BREAK:
       case NodeType.COLUMN_BREAK:
-        this.placeItem(node);
         this.advanceColumn();
         break;
 
@@ -273,6 +276,7 @@ export class GridLayoutEngine {
         this.advanceColumn();
         const level = parseInt(node.value, 10) || 0;
         this.currentRow = level;
+        this.ignoreIndent = true; // Ignore indent for this specific column
         this.placeItem(node);
         break;
       }

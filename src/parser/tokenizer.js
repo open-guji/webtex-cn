@@ -165,15 +165,16 @@ export class Tokenizer {
       while (this.pos < this.source.length && (isLetter(this.peek()) || this.peek() === '@' || this.peek() === '*')) {
         name += this.advance();
       }
-      // Skip trailing spaces after ASCII commands
-      while (this.pos < this.source.length && this.source[this.pos] === ' ') {
-        this.pos++;
-      }
     } else if (isCJKStart) {
       // CJK command: read CJK characters
       while (this.pos < this.source.length && isCJK(this.peek())) {
         name += this.advance();
       }
+    }
+
+    // Skip trailing spaces after ALL commands
+    while (this.pos < this.source.length && this.source[this.pos] === ' ') {
+      this.pos++;
     }
 
     // Special handling for \begin and \end

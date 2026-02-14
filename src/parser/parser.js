@@ -303,7 +303,7 @@ export class Parser {
       while (innerParser.pos < innerParser.tokens.length) {
         const t = innerParser.peek();
         if (t.type === TokenType.EOF) break;
-        const child = innerParser.parseToken();
+        const child = innerParser.parseToken(doc);
         if (child) node.children.push(child);
       }
     }
