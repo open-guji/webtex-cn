@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Examples",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3001/index.html",
+            "webRoot": "${workspaceFolder}/examples",
+            "preLaunchTask": "Start Dev Server"
+        }
+    ]
+}
