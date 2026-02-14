@@ -82,21 +82,20 @@
 }
 
 /* ---- Reset ---- */
-*,
-*::before,
-*::after {
+.wtc-scope,
+.wtc-scope :where(*, *::before, *::after) {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-body {
-  background: #e8e8e8;
+.wtc-scope {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 30px 20px;
   font-family: var(--wtc-font-family);
+  /* Inherit background or manage it via host container */
 }
 
 /* ---- Page ---- */
@@ -436,6 +435,17 @@ body {
 
 .wtc-taitou[data-level="3"] {
   padding-block-start: calc(3 * var(--wtc-grid-height));
+}
+
+/* ---- Catalog/Mulu Item (目录条目) ---- */
+.wtc-mulu-item {
+  display: block;
+  vertical-align: top;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  height: 100%;
+  width: var(--wtc-col-width);
+  /* Indentation is handled via inline style's padding-inline-start (top) */
 }
 
 /* ---- Stamp (印章) ---- */

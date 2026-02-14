@@ -80,6 +80,8 @@ export const LayoutMarker = {
   LIST_END: '_listEnd',
   LIST_ITEM_START: '_listItemStart',
   LIST_ITEM_END: '_listItemEnd',
+  MULU_ITEM_START: '_muluItemStart',
+  MULU_ITEM_END: '_muluItemEnd',
 };
 
 // ---------------------------------------------------------------------------
@@ -252,6 +254,18 @@ export class GridLayoutEngine {
         const level = parseInt(node.value, 10) || 0;
         this.currentRow = level;
         this.placeItem(node);
+        break;
+      }
+
+      case NodeType.MULU_ITEM: {
+        if (this.currentRow > 0) {
+          this.advanceColumn();
+        }
+        const level = parseInt(node.options?.value || '0', 10);
+        this.currentRow = level;
+        this.placeMarker(LayoutMarker.MULU_ITEM_START, { level });
+        this.walkChildren(node.children);
+        this.placeMarker(LayoutMarker.MULU_ITEM_END);
         break;
       }
 

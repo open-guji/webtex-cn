@@ -174,6 +174,10 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     }
     if (type === LayoutMarker.LIST_START) return '<span class="wtc-list">';
     if (type === LayoutMarker.LIST_ITEM_START) return '<span class="wtc-list-item">';
+    if (type === LayoutMarker.MULU_ITEM_START) {
+      const level = item.level || 0;
+      return `<span class="wtc-mulu-item" style="padding-inline-start: calc(${level} * var(--wtc-grid-height))">`;
+    }
     return '';
   }
 
@@ -184,6 +188,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     if (type === LayoutMarker.PARAGRAPH_START) return '</span>';
     if (type === LayoutMarker.LIST_START) return '</span>';
     if (type === LayoutMarker.LIST_ITEM_START) return '</span>';
+    if (type === LayoutMarker.MULU_ITEM_START) return '</span>';
     return '';
   }
 
@@ -192,8 +197,9 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
    */
   isOpenMarker(type) {
     return type === LayoutMarker.PARAGRAPH_START ||
-           type === LayoutMarker.LIST_START ||
-           type === LayoutMarker.LIST_ITEM_START;
+      type === LayoutMarker.LIST_START ||
+      type === LayoutMarker.LIST_ITEM_START ||
+      type === LayoutMarker.MULU_ITEM_START;
   }
 
   /**
@@ -203,6 +209,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     if (type === LayoutMarker.PARAGRAPH_END) return LayoutMarker.PARAGRAPH_START;
     if (type === LayoutMarker.LIST_END) return LayoutMarker.LIST_START;
     if (type === LayoutMarker.LIST_ITEM_END) return LayoutMarker.LIST_ITEM_START;
+    if (type === LayoutMarker.MULU_ITEM_END) return LayoutMarker.MULU_ITEM_START;
     return null;
   }
 

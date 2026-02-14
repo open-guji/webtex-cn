@@ -34,6 +34,7 @@ export const NodeType = {
   STAMP: 'stamp',
   MATH: 'math',
   PARAGRAPH_BREAK: 'paragraphBreak',
+  MULU_ITEM: 'muluItem',
   UNKNOWN: 'unknown',
 };
 
@@ -82,11 +83,16 @@ export function parseKeyValue(str) {
 
   // Last pair
   if (currentKey.trim()) {
+    const key = currentKey.trim();
     if (inValue) {
-      result[currentKey.trim()] = currentValue.trim();
+      result[key] = currentValue.trim();
     } else {
-      // Boolean flag: key without value
-      result[currentKey.trim()] = 'true';
+      // If it looks like a single number, treat it as 'value'
+      if (/^\d+$/.test(key)) {
+        result['value'] = key;
+      } else {
+        result[key] = 'true';
+      }
     }
   }
 

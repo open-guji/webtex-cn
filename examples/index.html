@@ -137,7 +137,7 @@
       <textarea id="tex-source" spellcheck="false" placeholder="在此输入 TeX 源文件..."></textarea>
     </div>
     <div class="preview-panel" id="preview-panel">
-      <div id="webtex-container"></div>
+      <div id="webtex-container" class="wtc-scope"></div>
     </div>
   </div>
 
@@ -145,6 +145,7 @@
 
   <script type="module">
     import { renderToDOM } from '../src/index.js';
+
 
     const texSource = document.getElementById('tex-source');
     const container = document.getElementById('webtex-container');
@@ -170,6 +171,9 @@
         console.error(err);
       }
     }
+
+
+
 
     function debouncedRender() {
       clearTimeout(renderTimer);
@@ -220,7 +224,8 @@
     new ResizeObserver(function () { updateScale(); }).observe(previewPanel);
 
     // Auto-load default file
-    loadTeX('shiji.tex');
+    texSelect.value = 'sikuanmulu.tex';
+    loadTeX('sikuanmulu.tex');
   </script>
 </body>
 

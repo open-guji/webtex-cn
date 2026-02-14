@@ -30,7 +30,7 @@
     "format": "prettier --write src/ test/ bin/ build.js",
     "format:check": "prettier --check src/ test/ bin/ build.js",
     "prepublishOnly": "npm run build",
-    "dev": "npx serve -l 3001 examples"
+    "dev": "npx serve -l 3001 ."
   },
   "keywords": [
     "tex",

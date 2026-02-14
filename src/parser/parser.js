@@ -449,6 +449,7 @@ export class Parser {
       'list': NodeType.LIST,
       'body': 'body',
       'stamp': NodeType.STAMP,
+      'muluItem': NodeType.MULU_ITEM,
       'relativeTaitou': NodeType.TAITOU,
     };
     return map[nodeName] || NodeType.UNKNOWN;
