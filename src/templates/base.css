@@ -106,7 +106,7 @@ body {
 /* ---- Page ---- */
 .wtc-page {
   width: var(--wtc-page-width);
-  min-height: var(--wtc-page-height);
+  height: var(--wtc-page-height);
   background: var(--wtc-page-background);
   margin: 20px auto;
   box-shadow: 0 2px 12px rgba(0,0,0,0.12);
@@ -119,7 +119,7 @@ body {
   display: flex;
   flex-direction: row-reverse;   /* Right half first (traditional reading order) */
   width: 100%;
-  min-height: var(--wtc-page-height);
+  height: var(--wtc-page-height);
   padding: var(--wtc-margin-top) var(--wtc-margin-right) var(--wtc-margin-bottom) var(--wtc-margin-left);
   position: relative;
 }
