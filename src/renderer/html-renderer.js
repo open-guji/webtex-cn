@@ -140,13 +140,18 @@ ${content}
     const setupStyles = this.getSetupStylesFromCommands(layoutResult.meta.setupCommands);
     const banxin = this.renderBanxinFromMeta(layoutResult.meta);
 
+    let carryStack = []; // marker stack carried across pages
     return layoutResult.pages.map(page => {
       const boundary = page.halfBoundary ?? page.items.length;
       const rightItems = page.items.slice(0, boundary);
       const leftItems = page.items.slice(boundary);
 
-      const rightHTML = this.renderLayoutItems(rightItems);
-      const leftHTML = this.renderLayoutItems(leftItems);
+      const right = this.renderLayoutItems(rightItems, carryStack);
+      const left = this.renderLayoutItems(leftItems, right.openStack);
+      carryStack = left.openStack;
+
+      const rightHTML = right.html;
+      const leftHTML = left.html;
       const floatsHTML = page.floats.map(f => this.renderNode(f)).join('\n');
 
       return `<div class="wtc-spread"${setupStyles}>
@@ -156,44 +161,96 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
   }
 
   /**
+   * Get the open tag HTML for a marker item.
+   */
+  markerOpenTag(item) {
+    const type = item.node.type;
+    if (type === LayoutMarker.PARAGRAPH_START) {
+      const indent = parseInt(item.paragraphNode?.options?.indent || '0', 10);
+      if (indent > 0) {
+        return `<span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(${indent} * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - ${indent}) * var(--wtc-grid-height))">`;
+      }
+      return '<span class="wtc-paragraph">';
+    }
+    if (type === LayoutMarker.LIST_START) return '<span class="wtc-list">';
+    if (type === LayoutMarker.LIST_ITEM_START) return '<span class="wtc-list-item">';
+    return '';
+  }
+
+  /**
+   * Get the close tag HTML for a marker type.
+   */
+  markerCloseTag(type) {
+    if (type === LayoutMarker.PARAGRAPH_START) return '</span>';
+    if (type === LayoutMarker.LIST_START) return '</span>';
+    if (type === LayoutMarker.LIST_ITEM_START) return '</span>';
+    return '';
+  }
+
+  /**
+   * Check if a marker type is an "open" marker.
+   */
+  isOpenMarker(type) {
+    return type === LayoutMarker.PARAGRAPH_START ||
+           type === LayoutMarker.LIST_START ||
+           type === LayoutMarker.LIST_ITEM_START;
+  }
+
+  /**
+   * Check if a marker type is a "close" marker, and return its matching open type.
+   */
+  matchingOpenMarker(type) {
+    if (type === LayoutMarker.PARAGRAPH_END) return LayoutMarker.PARAGRAPH_START;
+    if (type === LayoutMarker.LIST_END) return LayoutMarker.LIST_START;
+    if (type === LayoutMarker.LIST_ITEM_END) return LayoutMarker.LIST_ITEM_START;
+    return null;
+  }
+
+  /**
    * Render an array of layout items into HTML.
    * Handles start/end markers for paragraphs, lists, and list items.
+   * markerStack: open markers inherited from a previous slice (for tag balancing).
+   * Returns { html, openStack } where openStack is the unclosed markers at the end.
    */
-  renderLayoutItems(items) {
+  renderLayoutItems(items, markerStack = []) {
     let html = '';
+
+    // Re-open tags from inherited stack
+    for (const entry of markerStack) {
+      html += this.markerOpenTag(entry);
+    }
+    const stack = [...markerStack];
+
     for (const item of items) {
       const type = item.node.type;
-      switch (type) {
-        case LayoutMarker.PARAGRAPH_START: {
-          const indent = parseInt(item.paragraphNode?.options?.indent || '0', 10);
-          if (indent > 0) {
-            html += `<span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(${indent} * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - ${indent}) * var(--wtc-grid-height))">`;
-          } else {
-            html += '<span class="wtc-paragraph">';
-          }
-          break;
+      if (this.isOpenMarker(type)) {
+        // Non-first list items need a column break to match layout engine's advanceColumn()
+        if (type === LayoutMarker.LIST_ITEM_START && !item.isFirstListItem) {
+          html += '<br class="wtc-newline">';
         }
-        case LayoutMarker.PARAGRAPH_END:
-          html += '</span>';
-          break;
-        case LayoutMarker.LIST_START:
-          html += '<div class="wtc-list">';
-          break;
-        case LayoutMarker.LIST_END:
-          html += '</div>';
-          break;
-        case LayoutMarker.LIST_ITEM_START:
-          html += '<div class="wtc-list-item">';
-          break;
-        case LayoutMarker.LIST_ITEM_END:
-          html += '</div>';
-          break;
-        default:
-          html += this.renderLayoutItem(item);
-          break;
+        html += this.markerOpenTag(item);
+        stack.push(item);
+      } else if (this.matchingOpenMarker(type)) {
+        html += this.markerCloseTag(this.matchingOpenMarker(type));
+        // Pop matching open marker from stack
+        for (let i = stack.length - 1; i >= 0; i--) {
+          if (stack[i].node.type === this.matchingOpenMarker(type)) {
+            stack.splice(i, 1);
+            break;
+          }
+        }
+      } else {
+        html += this.renderLayoutItem(item);
       }
     }
-    return html;
+
+    // Close unclosed tags (in reverse order)
+    const unclosed = [...stack];
+    for (let i = stack.length - 1; i >= 0; i--) {
+      html += this.markerCloseTag(stack[i].node.type);
+    }
+
+    return { html, openStack: unclosed };
   }
 
   /**
@@ -229,15 +286,21 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
   renderBanxinFromMeta(meta) {
     if (!meta.title && !meta.chapter) return '';
     const title = escapeHTML(meta.title || '');
-    const chapter = escapeHTML(meta.chapter || '').replace(/\n/g, '<br>');
+    // Chapter may contain \\ for line breaks → split into separate spans
+    const chapterParts = (meta.chapter || '').split(/\\\\|\n/).map(s => s.trim()).filter(Boolean);
+    const chapterHTML = chapterParts.map(p => `<span class="wtc-banxin-chapter-part">${escapeHTML(p)}</span>`).join('');
 
     return `<div class="wtc-banxin">
-  <div class="wtc-banxin-section wtc-banxin-upper"><div class="wtc-yuwei wtc-yuwei-upper"></div></div>
-  <div class="wtc-banxin-section wtc-banxin-middle">
+  <div class="wtc-banxin-section wtc-banxin-upper">
     <span class="wtc-banxin-book-name">${title}</span>
-    <span class="wtc-banxin-chapter">${chapter}</span>
+    <div class="wtc-yuwei wtc-yuwei-upper"></div>
   </div>
-  <div class="wtc-banxin-section wtc-banxin-lower"><div class="wtc-yuwei wtc-yuwei-lower"></div></div>
+  <div class="wtc-banxin-section wtc-banxin-middle">
+    <div class="wtc-banxin-chapter">${chapterHTML}</div>
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-lower">
+    <div class="wtc-yuwei wtc-yuwei-lower"></div>
+  </div>
 </div>`;
   }
 
@@ -382,15 +445,20 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
   renderBanxin() {
     if (!this.ast.title && !this.ast.chapter) return '';
     const title = escapeHTML(this.ast.title || '');
-    const chapter = escapeHTML(this.ast.chapter || '').replace(/\n/g, '<br>');
+    const chapterParts = (this.ast.chapter || '').split(/\\\\|\n/).map(s => s.trim()).filter(Boolean);
+    const chapterHTML = chapterParts.map(p => `<span class="wtc-banxin-chapter-part">${escapeHTML(p)}</span>`).join('');
 
     return `<div class="wtc-banxin">
-  <div class="wtc-banxin-section wtc-banxin-upper"><div class="wtc-yuwei wtc-yuwei-upper"></div></div>
-  <div class="wtc-banxin-section wtc-banxin-middle">
+  <div class="wtc-banxin-section wtc-banxin-upper">
     <span class="wtc-banxin-book-name">${title}</span>
-    <span class="wtc-banxin-chapter">${chapter}</span>
+    <div class="wtc-yuwei wtc-yuwei-upper"></div>
   </div>
-  <div class="wtc-banxin-section wtc-banxin-lower"><div class="wtc-yuwei wtc-yuwei-lower"></div></div>
+  <div class="wtc-banxin-section wtc-banxin-middle">
+    <div class="wtc-banxin-chapter">${chapterHTML}</div>
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-lower">
+    <div class="wtc-yuwei wtc-yuwei-lower"></div>
+  </div>
 </div>`;
   }
 

@@ -40,10 +40,10 @@
   /* Jiazhu: visually smaller chars but same grid-cell height as main text.
      font-size < 1em for smaller glyphs; letter-spacing compensates to match grid height.
      Grid height per char = font-size × (1 + ls-ratio). Jiazhu needs same total.
-     jiazhu-ls = (grid-height - jiazhu-font-size) = font-size×(1+ls-ratio) - font-size×0.85
-               = font-size × (0.15 + ls-ratio).  In em: (0.15+ls-ratio)/0.85 */
-  --wtc-jiazhu-font-size: 0.85em;
-  --wtc-jiazhu-letter-spacing: calc((0.15 + var(--wtc-letter-spacing-ratio)) / 0.85 * 1em);
+     jiazhu-ls = (grid-height - jiazhu-font-size) = font-size×(1+ls-ratio) - font-size×0.7
+               = font-size × (0.15 + ls-ratio).  In em: (0.15+ls-ratio)/0.7 */
+  --wtc-jiazhu-font-size: 0.7em;
+  --wtc-jiazhu-letter-spacing: calc((0.3 + var(--wtc-letter-spacing-ratio)) / 0.7 * 1em);
   --wtc-jiazhu-line-height: calc(var(--wtc-line-height) / 2);
   --wtc-jiazhu-color: inherit;
   --wtc-jiazhu-gap: 0px;
@@ -172,8 +172,6 @@ body {
   border-right: var(--wtc-border-thickness) solid var(--wtc-border-color);
   flex-shrink: 0;
   position: relative;
-  writing-mode: vertical-rl;
-  text-orientation: upright;
 }
 
 .wtc-banxin-section {
@@ -185,11 +183,26 @@ body {
   overflow: hidden;
 }
 
+/* Upper: book title + upper fish tail */
 .wtc-banxin-upper {
   flex: 0 0 28.2%;
   justify-content: flex-end;
+  gap: 4px;
 }
 
+.wtc-banxin-book-name {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: var(--wtc-banxin-font-size);
+  color: var(--wtc-font-color);
+  letter-spacing: 0.1em;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Middle: chapter/volume info */
 .wtc-banxin-middle {
   flex: 0 0 56.3%;
   font-size: var(--wtc-banxin-chapter-font-size);
@@ -198,16 +211,28 @@ body {
   border-bottom: var(--wtc-border-thickness) solid var(--wtc-border-color);
 }
 
+.wtc-banxin-chapter {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  height: 100%;
+  gap: 2px;
+  padding: 8px 0;
+}
+
+.wtc-banxin-chapter-part {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+}
+
+/* Lower: page number + lower fish tail */
 .wtc-banxin-lower {
   flex: 0 0 15.5%;
   font-size: var(--wtc-banxin-page-font-size);
-}
-
-.wtc-banxin-chapter,
-.wtc-banxin-book-name,
-.wtc-banxin-page-num {
-  writing-mode: vertical-rl;
-  text-orientation: upright;
 }
 
 /* Yuwei (鱼尾) */
@@ -327,13 +352,13 @@ body {
 }
 
 /* ---- List (列表) ---- */
-/* In vertical-rl, display:block makes each item its own column */
+/* Inline wrappers — column breaks handled by layout engine, not CSS */
 .wtc-list {
-  display: block;
+  display: inline;
 }
 
 .wtc-list-item {
-  display: block;
+  display: inline;
   text-align: center;
 }
 

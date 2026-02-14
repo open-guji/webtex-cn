@@ -341,19 +341,30 @@ export class GridLayoutEngine {
 
   /**
    * Walk LIST node — emits start/end markers and walks children.
+   * Tracks whether first item needs advanceColumn or not.
    */
   walkList(node) {
     this.placeMarker(LayoutMarker.LIST_START);
-    this.walkChildren(node.children);
+    let first = true;
+    for (const child of node.children) {
+      if (child.type === NodeType.LIST_ITEM) {
+        this.walkListItem(child, first);
+        first = false;
+      } else {
+        this.walkNode(child);
+      }
+    }
     this.placeMarker(LayoutMarker.LIST_END);
   }
 
   /**
-   * Walk LIST_ITEM node — starts a new column, emits markers.
+   * Walk LIST_ITEM node — emits markers. Advances column for non-first items.
    */
-  walkListItem(node) {
-    this.advanceColumn();
-    this.placeMarker(LayoutMarker.LIST_ITEM_START);
+  walkListItem(node, isFirst = false) {
+    if (!isFirst) {
+      this.advanceColumn();
+    }
+    this.placeMarker(LayoutMarker.LIST_ITEM_START, { isFirstListItem: isFirst });
     this.walkChildren(node.children);
     this.placeMarker(LayoutMarker.LIST_ITEM_END);
   }
@@ -445,8 +456,11 @@ export function layout(ast) {
   const { nRows, nCols } = getGridConfig(templateId);
   const engine = new GridLayoutEngine(nRows, nCols);
 
+  // Only layout 'body' nodes — skip preamble paragraphBreaks etc.
   for (const child of ast.children) {
-    engine.walkNode(child);
+    if (child.type === 'body') {
+      engine.walkNode(child);
+    }
   }
 
   // Finalize: ensure last page has halfBoundary
