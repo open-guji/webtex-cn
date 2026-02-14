@@ -77,23 +77,14 @@
   --wtc-book-title-color: #333;
 
   /* Page dimensions (computed from grid + borders + margins) */
-  --wtc-page-width: calc(
-    var(--wtc-margin-left) + var(--wtc-margin-right) + var(--wtc-banxin-width)
-    + 2 * (var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height)
-           + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep)
-           + 2 * var(--wtc-border-thickness) + 8px)
-  );
-  --wtc-page-height: calc(
-    var(--wtc-n-rows) * var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio))
-    + var(--wtc-margin-top) + var(--wtc-margin-bottom)
-    + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep)
-    + 2 * var(--wtc-border-thickness)
-    + var(--wtc-border-padding-top) + var(--wtc-border-padding-bottom)
-  );
+  --wtc-page-width: calc(var(--wtc-margin-left) + var(--wtc-margin-right) + var(--wtc-banxin-width) + 2 * (var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + 8px));
+  --wtc-page-height: calc(var(--wtc-n-rows) * var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio)) + var(--wtc-margin-top) + var(--wtc-margin-bottom) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + var(--wtc-border-padding-top) + var(--wtc-border-padding-bottom));
 }
 
 /* ---- Reset ---- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -114,7 +105,7 @@ body {
   height: var(--wtc-page-height);
   background: var(--wtc-page-background);
   margin: 20px auto;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
   position: relative;
   overflow: visible;
 }
@@ -122,7 +113,8 @@ body {
 /* ---- Spread (double page with banxin) ---- */
 .wtc-spread {
   display: flex;
-  flex-direction: row-reverse;   /* Right half first (traditional reading order) */
+  flex-direction: row-reverse;
+  /* Right half first (traditional reading order) */
   width: 100%;
   height: var(--wtc-page-height);
   padding: var(--wtc-margin-top) var(--wtc-margin-right) var(--wtc-margin-bottom) var(--wtc-margin-left);
@@ -143,7 +135,7 @@ body {
   height: 100%;
 }
 
-.wtc-content-border > .wtc-content {
+.wtc-content-border>.wtc-content {
   border: var(--wtc-border-thickness) solid var(--wtc-border-color);
   padding: var(--wtc-border-padding-top) 4px var(--wtc-border-padding-bottom) 4px;
   height: 100%;
@@ -163,13 +155,11 @@ body {
   /* 乌丝栏: inner column border lines via background-size for reliable rendering */
   --wtc-col-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
   background-origin: content-box;
-  background-image: repeating-linear-gradient(
-    to left,
-    transparent 0,
-    transparent calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
-    var(--wtc-border-color) calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
-    var(--wtc-border-color) var(--wtc-col-width)
-  );
+  background-image: repeating-linear-gradient(to left,
+      transparent 0,
+      transparent calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
+      var(--wtc-border-color) calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
+      var(--wtc-border-color) var(--wtc-col-width));
 }
 
 /* ---- Banxin (版心) ---- */
@@ -213,7 +203,9 @@ body {
   font-size: var(--wtc-banxin-page-font-size);
 }
 
-.wtc-banxin-chapter, .wtc-banxin-book-name, .wtc-banxin-page-num {
+.wtc-banxin-chapter,
+.wtc-banxin-book-name,
+.wtc-banxin-page-num {
   writing-mode: vertical-rl;
   text-orientation: upright;
 }
@@ -258,6 +250,7 @@ body {
 .wtc-jiazhu {
   display: inline-flex;
   flex-direction: column;
+  flex-wrap: nowrap;
   vertical-align: top;
   font-size: var(--wtc-jiazhu-font-size);
   letter-spacing: var(--wtc-jiazhu-letter-spacing);
@@ -270,6 +263,8 @@ body {
   writing-mode: vertical-rl;
   text-orientation: upright;
   flex-shrink: 0;
+  /* Each sub-column = half of one main text column physical width */
+  width: calc(var(--wtc-font-size) * var(--wtc-line-height) / 2);
 }
 
 /* Flow mode: for jiazhu with nested commands */
@@ -375,10 +370,8 @@ body {
   justify-content: center;
   border: 1px solid var(--wtc-border-color);
   padding: 0.05em;
-  clip-path: polygon(
-    30% 0%, 70% 0%, 100% 30%, 100% 70%,
-    70% 100%, 30% 100%, 0% 70%, 0% 30%
-  );
+  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%,
+      70% 100%, 30% 100%, 0% 70%, 0% 30%);
 }
 
 .wtc-circled {
@@ -461,14 +454,35 @@ br.wtc-paragraph-break {
     --wtc-margin-left: 15px;
     --wtc-margin-right: 15px;
   }
-  .wtc-page { box-shadow: none; margin: 5px auto; }
-  .wtc-banxin { display: none; }
-  .wtc-half-left { display: none; }
+
+  .wtc-page {
+    box-shadow: none;
+    margin: 5px auto;
+  }
+
+  .wtc-banxin {
+    display: none;
+  }
+
+  .wtc-half-left {
+    display: none;
+  }
 }
 
 /* ---- Print ---- */
 @media print {
-  body { background: none; padding: 0; }
-  .wtc-page { box-shadow: none; margin: 0; page-break-after: always; }
-  .wtc-page:last-child { page-break-after: avoid; }
+  body {
+    background: none;
+    padding: 0;
+  }
+
+  .wtc-page {
+    box-shadow: none;
+    margin: 0;
+    page-break-after: always;
+  }
+
+  .wtc-page:last-child {
+    page-break-after: avoid;
+  }
 }

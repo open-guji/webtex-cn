@@ -1,23 +1,31 @@
 /**
  * WebTeX-CN: Convert luatex-cn TeX files to HTML+CSS
  * Main entry point.
+ *
+ * Pipeline: parse → layout → render
  */
 
 import { parse } from './parser/index.js';
+import { layout } from './layout/grid-layout.js';
 import { HTMLRenderer } from './renderer/html-renderer.js';
 
 /**
- * Parse TeX source and render to HTML string.
+ * Parse TeX source, run layout, and render to HTML string.
+ * Returns multi-page HTML with each page wrapped in a wtc-page div.
  * @param {string} texSource - TeX source code
- * @returns {string} HTML content
+ * @returns {string} HTML content (multiple wtc-page divs)
  */
 export function renderToHTML(texSource) {
   const { ast, warnings } = parse(texSource);
   if (warnings.length > 0) {
     console.warn('[WebTeX-CN] Parse warnings:', warnings);
   }
+  const layoutResult = layout(ast);
   const renderer = new HTMLRenderer(ast);
-  return renderer.render();
+  const pageHTMLs = renderer.renderFromLayout(layoutResult);
+  return pageHTMLs.map(html =>
+    `<div class="wtc-page" data-template="${layoutResult.templateId}">${html}</div>`
+  ).join('\n');
 }
 
 /**
@@ -36,6 +44,7 @@ export function renderToPage(texSource) {
 
 /**
  * Render TeX source into a DOM container.
+ * Generates multiple wtc-page divs (one per spread).
  * @param {string} texSource - TeX source code
  * @param {HTMLElement|string} container - DOM element or CSS selector
  * @param {object} [options] - Render options
@@ -47,8 +56,10 @@ export function renderToDOM(texSource, container, options = {}) {
   if (warnings.length > 0) {
     console.warn('[WebTeX-CN] Parse warnings:', warnings);
   }
+  const layoutResult = layout(ast);
   const renderer = new HTMLRenderer(ast);
-  const html = renderer.render();
+  const pageHTMLs = renderer.renderFromLayout(layoutResult);
+
   const el = typeof container === 'string'
     ? document.querySelector(container)
     : container;
@@ -57,9 +68,11 @@ export function renderToDOM(texSource, container, options = {}) {
   }
   // Auto-inject template CSS if cssBasePath is provided
   if (cssBasePath && typeof document !== 'undefined') {
-    setTemplate(renderer.templateId, cssBasePath);
+    setTemplate(layoutResult.templateId, cssBasePath);
   }
-  el.innerHTML = `<div class="wtc-page" data-template="${renderer.templateId}">${html}</div>`;
+  el.innerHTML = pageHTMLs.map(html =>
+    `<div class="wtc-page" data-template="${layoutResult.templateId}">${html}</div>`
+  ).join('\n');
 }
 
 /**
@@ -112,4 +125,5 @@ if (typeof window !== 'undefined') {
 }
 
 export { parse } from './parser/index.js';
+export { layout } from './layout/grid-layout.js';
 export { HTMLRenderer } from './renderer/html-renderer.js';

@@ -1,90 +1,10 @@
 /**
- * HTML Renderer: converts Document AST to HTML string.
+ * HTML Renderer: converts Document AST (or LayoutResult) to HTML string.
  */
 
 import { NodeType } from '../model/nodes.js';
-
-// Template name → CSS file mapping
-const templateCSSMap = {
-  '四库全书': 'siku-quanshu',
-  '四庫全書': 'siku-quanshu',
-  '四库全书彩色': 'siku-quanshu-colored',
-  '四庫全書彩色': 'siku-quanshu-colored',
-  '红楼梦甲戌本': 'honglou',
-  '紅樓夢甲戌本': 'honglou',
-  '极简': 'minimal',
-  '極簡': 'minimal',
-  'default': 'siku-quanshu',
-};
-
-// Template → grid config (must match CSS --wtc-n-rows / --wtc-n-cols)
-const templateGridConfig = {
-  'siku-quanshu': { nRows: 21, nCols: 8 },
-  'siku-quanshu-colored': { nRows: 21, nCols: 8 },
-  'honglou': { nRows: 20, nCols: 9 },
-  'minimal': { nRows: 21, nCols: 8 },
-};
-
-/**
- * Escape HTML special characters.
- */
-function escapeHTML(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-/**
- * Split jiazhu text into two balanced columns.
- */
-function splitJiazhu(text, align = 'outward') {
-  const chars = [...text]; // Proper Unicode splitting
-  if (chars.length === 0) return { col1: '', col2: '' };
-  if (chars.length === 1) return { col1: chars[0], col2: '' };
-
-  const mid = align === 'inward'
-    ? Math.floor(chars.length / 2)   // inward: first column shorter
-    : Math.ceil(chars.length / 2);   // outward: first column longer or equal
-
-  return {
-    col1: chars.slice(0, mid).join(''),
-    col2: chars.slice(mid).join(''),
-  };
-}
-
-/**
- * Split long jiazhu text into multiple dual-column segments.
- */
-function splitJiazhuMulti(text, maxCharsPerCol = 20, align = 'outward') {
-  const chars = [...text];
-  const chunkSize = maxCharsPerCol * 2;
-  if (chars.length <= chunkSize) {
-    return [splitJiazhu(text, align)];
-  }
-  const segments = [];
-  for (let i = 0; i < chars.length; i += chunkSize) {
-    const chunk = chars.slice(i, i + chunkSize).join('');
-    segments.push(splitJiazhu(chunk, align));
-  }
-  return segments;
-}
-
-/**
- * Get plain text content from a list of child nodes.
- */
-function getPlainText(children) {
-  let text = '';
-  for (const child of children) {
-    if (child.type === NodeType.TEXT) {
-      text += child.value;
-    } else if (child.children && child.children.length > 0) {
-      text += getPlainText(child.children);
-    }
-  }
-  return text;
-}
+import { resolveTemplateId, getGridConfig } from '../config/templates.js';
+import { getPlainText, splitJiazhuMulti, LayoutMarker } from '../layout/grid-layout.js';
 
 // Setup parameter → CSS variable mapping
 const setupParamMap = {
@@ -129,33 +49,36 @@ const setupParamMap = {
   },
 };
 
+/**
+ * Escape HTML special characters.
+ */
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export class HTMLRenderer {
   constructor(ast) {
     this.ast = ast;
-    this.templateId = templateCSSMap[ast.template] || 'siku-quanshu';
+    this.templateId = resolveTemplateId(ast);
     this.meipiCount = 0;
 
-    // Process gujiSetup template override
-    for (const cmd of (ast.setupCommands || [])) {
-      if (cmd.setupType === 'guji' && cmd.params?.template) {
-        const override = templateCSSMap[cmd.params.template];
-        if (override) this.templateId = override;
-      }
-    }
-
-    // Grid config from template
-    const grid = templateGridConfig[this.templateId] || { nRows: 21, nCols: 8 };
+    const grid = getGridConfig(this.templateId);
     this.nRows = grid.nRows;
     this.nCols = grid.nCols;
-    this.currentIndent = 0; // tracks paragraph indent for jiazhu splitting
+    this.currentIndent = 0;
+    this.colPos = 0;
   }
 
   /**
    * Collect CSS variable overrides from setup commands.
    */
-  getSetupStyles() {
+  getSetupStylesFromCommands(setupCommands) {
     const overrides = [];
-    for (const cmd of (this.ast.setupCommands || [])) {
+    for (const cmd of (setupCommands || [])) {
       const mapping = setupParamMap[cmd.setupType];
       if (!mapping || !cmd.params) continue;
       for (const [param, value] of Object.entries(cmd.params)) {
@@ -168,22 +91,24 @@ export class HTMLRenderer {
     return overrides.length > 0 ? ` style="${overrides.join('; ')}"` : '';
   }
 
+  getSetupStyles() {
+    return this.getSetupStylesFromCommands(this.ast.setupCommands);
+  }
+
+  // =====================================================================
+  // Legacy render() — walks AST directly (kept for backward compat)
+  // =====================================================================
+
   render() {
     let html = '';
-
     for (const child of this.ast.children) {
       html += this.renderNode(child);
     }
-
     return html;
   }
 
-  /**
-   * Render full HTML page (standalone).
-   */
   renderPage() {
     const content = this.render();
-
     return `<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -200,6 +125,126 @@ ${content}
 </html>`;
   }
 
+  // =====================================================================
+  // New layout-based render pipeline
+  // =====================================================================
+
+  /**
+   * Render a LayoutResult into multi-page HTML.
+   * Each page becomes one wtc-page div with a complete spread.
+   *
+   * @param {object} layoutResult  Output of layout()
+   * @returns {string[]} Array of page HTML strings (one per page)
+   */
+  renderFromLayout(layoutResult) {
+    const setupStyles = this.getSetupStylesFromCommands(layoutResult.meta.setupCommands);
+    const banxin = this.renderBanxinFromMeta(layoutResult.meta);
+
+    return layoutResult.pages.map(page => {
+      const boundary = page.halfBoundary ?? page.items.length;
+      const rightItems = page.items.slice(0, boundary);
+      const leftItems = page.items.slice(boundary);
+
+      const rightHTML = this.renderLayoutItems(rightItems);
+      const leftHTML = this.renderLayoutItems(leftItems);
+      const floatsHTML = page.floats.map(f => this.renderNode(f)).join('\n');
+
+      return `<div class="wtc-spread"${setupStyles}>
+${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">${rightHTML}</div></div></div>${banxin}<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content">${leftHTML}</div></div></div>
+</div>`;
+    });
+  }
+
+  /**
+   * Render an array of layout items into HTML.
+   * Handles start/end markers for paragraphs, lists, and list items.
+   */
+  renderLayoutItems(items) {
+    let html = '';
+    for (const item of items) {
+      const type = item.node.type;
+      switch (type) {
+        case LayoutMarker.PARAGRAPH_START: {
+          const indent = parseInt(item.paragraphNode?.options?.indent || '0', 10);
+          if (indent > 0) {
+            html += `<span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(${indent} * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - ${indent}) * var(--wtc-grid-height))">`;
+          } else {
+            html += '<span class="wtc-paragraph">';
+          }
+          break;
+        }
+        case LayoutMarker.PARAGRAPH_END:
+          html += '</span>';
+          break;
+        case LayoutMarker.LIST_START:
+          html += '<div class="wtc-list">';
+          break;
+        case LayoutMarker.LIST_END:
+          html += '</div>';
+          break;
+        case LayoutMarker.LIST_ITEM_START:
+          html += '<div class="wtc-list-item">';
+          break;
+        case LayoutMarker.LIST_ITEM_END:
+          html += '</div>';
+          break;
+        default:
+          html += this.renderLayoutItem(item);
+          break;
+      }
+    }
+    return html;
+  }
+
+  /**
+   * Render a single layout item.
+   * If the item has pre-computed jiazhuSegments, use those directly.
+   */
+  renderLayoutItem(item) {
+    if (item.jiazhuSegments && item.node.type === NodeType.JIAZHU) {
+      return this.renderJiazhuFromSegments(item.node, item.jiazhuSegments);
+    }
+    return this.renderNode(item.node);
+  }
+
+  /**
+   * Render jiazhu from pre-computed segments.
+   */
+  renderJiazhuFromSegments(node, segments) {
+    // Check if children are complex (non-text)
+    const hasComplexChildren = node.children.some(c => c.type !== NodeType.TEXT);
+    if (hasComplexChildren) {
+      // Fall back to node-based rendering
+      return this.renderJiazhuComplex(node);
+    }
+
+    return segments.map(({ col1, col2 }) =>
+      `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${escapeHTML(col1)}</span><span class="wtc-jiazhu-col">${escapeHTML(col2)}</span></span>`
+    ).join('');
+  }
+
+  /**
+   * Render banxin from layout metadata.
+   */
+  renderBanxinFromMeta(meta) {
+    if (!meta.title && !meta.chapter) return '';
+    const title = escapeHTML(meta.title || '');
+    const chapter = escapeHTML(meta.chapter || '').replace(/\n/g, '<br>');
+
+    return `<div class="wtc-banxin">
+  <div class="wtc-banxin-section wtc-banxin-upper"><div class="wtc-yuwei wtc-yuwei-upper"></div></div>
+  <div class="wtc-banxin-section wtc-banxin-middle">
+    <span class="wtc-banxin-book-name">${title}</span>
+    <span class="wtc-banxin-chapter">${chapter}</span>
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-lower"><div class="wtc-yuwei wtc-yuwei-lower"></div></div>
+</div>`;
+  }
+
+  // =====================================================================
+  // Node rendering (shared between legacy and layout pipelines)
+  // =====================================================================
+
   renderNode(node) {
     if (!node) return '';
 
@@ -213,16 +258,21 @@ ${content}
       case NodeType.PARAGRAPH:
         return this.renderParagraph(node);
 
-      case NodeType.TEXT:
-        return escapeHTML(node.value || '');
+      case NodeType.TEXT: {
+        const val = node.value || '';
+        this.colPos += [...val].length;
+        return escapeHTML(val);
+      }
 
       case NodeType.NEWLINE:
+        this.colPos = 0;
         return '<br class="wtc-newline">';
 
       case NodeType.MATH:
         return `<span class="wtc-math">${escapeHTML(node.value || '')}</span>`;
 
       case NodeType.PARAGRAPH_BREAK:
+        this.colPos = 0;
         return '<br class="wtc-paragraph-break">';
 
       case NodeType.JIAZHU:
@@ -247,6 +297,7 @@ ${content}
         return this.renderSpace(node);
 
       case NodeType.COLUMN_BREAK:
+        this.colPos = 0;
         return '<br class="wtc-column-break">';
 
       case NodeType.TAITOU:
@@ -256,7 +307,6 @@ ${content}
         return this.renderNuotai(node);
 
       case NodeType.SET_INDENT:
-        // Emit inline style for indent change
         return `<span class="wtc-set-indent" data-indent="${node.value || 0}"></span>`;
 
       case NodeType.EMPHASIS:
@@ -296,7 +346,6 @@ ${content}
         return this.renderStamp(node);
 
       default:
-        // Unknown node: render children if any
         if (node.children && node.children.length > 0) {
           return this.renderChildren(node.children);
         }
@@ -309,7 +358,6 @@ ${content}
   }
 
   renderContentBlock(node) {
-    // Separate floating elements (meipi, pizhu) from inline content
     const floatingHTML = [];
     const inlineChildren = [];
 
@@ -333,7 +381,6 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
 
   renderBanxin() {
     if (!this.ast.title && !this.ast.chapter) return '';
-
     const title = escapeHTML(this.ast.title || '');
     const chapter = escapeHTML(this.ast.chapter || '').replace(/\n/g, '<br>');
 
@@ -350,48 +397,59 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
   renderParagraph(node) {
     const indent = parseInt(node.options?.indent || '0', 10);
     if (indent > 0) {
-      // Set indent context so jiazhu splits at (nRows - indent) chars per column
       const prevIndent = this.currentIndent;
       this.currentIndent = indent;
       const inner = this.renderChildren(node.children);
       this.currentIndent = prevIndent;
-      // Inline-block with reduced height: each column fits (n-rows - indent) chars.
       return `<span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(${indent} * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - ${indent}) * var(--wtc-grid-height))">${inner}</span>`;
     }
     return `<span class="wtc-paragraph">${this.renderChildren(node.children)}</span>`;
   }
 
   renderJiazhu(node) {
-    // If children contain only text nodes, use optimized split
     const hasComplexChildren = node.children.some(c => c.type !== NodeType.TEXT);
 
     if (hasComplexChildren) {
-      // Complex children: split child nodes at midpoint by character count
-      const text = getPlainText(node.children);
-      const mid = Math.ceil([...text].length / 2);
-      let charCount = 0;
-      let splitIdx = node.children.length;
-      for (let i = 0; i < node.children.length; i++) {
-        const childText = getPlainText([node.children[i]]);
-        charCount += [...childText].length;
-        if (charCount >= mid) {
-          splitIdx = i + 1;
-          break;
-        }
-      }
-      const col1HTML = node.children.slice(0, splitIdx).map(c => this.renderNode(c)).join('');
-      const col2HTML = node.children.slice(splitIdx).map(c => this.renderNode(c)).join('');
-      return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
+      return this.renderJiazhuComplex(node);
     }
 
     const text = getPlainText(node.children);
     const align = node.options?.align || 'outward';
     const maxPerCol = this.nRows - this.currentIndent;
-    const segments = splitJiazhuMulti(text, maxPerCol, align);
+    const remaining = maxPerCol - (this.colPos % maxPerCol);
+    const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
+    const segments = splitJiazhuMulti(text, maxPerCol, align, firstMax);
+
+    const totalChars = [...text].length;
+    const firstSegChars = firstMax * 2;
+    if (totalChars <= firstSegChars) {
+      this.colPos += Math.ceil(totalChars / 2);
+    } else {
+      const lastSeg = segments[segments.length - 1];
+      this.colPos = Math.max([...lastSeg.col1].length, [...lastSeg.col2].length);
+    }
 
     return segments.map(({ col1, col2 }) =>
       `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${escapeHTML(col1)}</span><span class="wtc-jiazhu-col">${escapeHTML(col2)}</span></span>`
     ).join('');
+  }
+
+  renderJiazhuComplex(node) {
+    const text = getPlainText(node.children);
+    const mid = Math.ceil([...text].length / 2);
+    let charCount = 0;
+    let splitIdx = node.children.length;
+    for (let i = 0; i < node.children.length; i++) {
+      const childText = getPlainText([node.children[i]]);
+      charCount += [...childText].length;
+      if (charCount >= mid) {
+        splitIdx = i + 1;
+        break;
+      }
+    }
+    const col1HTML = node.children.slice(0, splitIdx).map(c => this.renderNode(c)).join('');
+    const col2HTML = node.children.slice(splitIdx).map(c => this.renderNode(c)).join('');
+    return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 
   renderSidenote(node) {
@@ -412,7 +470,6 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
     if (opts.x) {
       style += `right: ${opts.x};`;
     } else {
-      // Auto-position: offset each meipi to avoid overlap
       const autoX = this.meipiCount * 2;
       style += `right: ${autoX}em;`;
       this.meipiCount++;
@@ -458,7 +515,6 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
     if (opts.height) {
       style += `--wtc-textbox-height: ${opts.height};`;
     }
-    // Old syntax: \填充文本框[12]{...} where 12 is just a number
     if (opts.value && /^\d+$/.test(opts.value)) {
       style += `--wtc-textbox-height: ${opts.value};`;
     }
@@ -494,18 +550,10 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
     return `<img class="wtc-stamp" src="${escapeHTML(node.src || '')}" style="${style}" alt="stamp">`;
   }
 
-  /**
-   * Parse luatex-cn color format to CSS.
-   * Formats: "red", "1 0 0" (RGB 0-1), "{180, 95, 75}" (RGB 0-255)
-   */
   parseColor(colorStr) {
     if (!colorStr) return 'inherit';
     colorStr = colorStr.replace(/[{}]/g, '').trim();
-
-    // Named color
     if (/^[a-zA-Z]+$/.test(colorStr)) return colorStr;
-
-    // RGB 0-1 format: "1 0 0" or "0.5 0.3 0.2"
     const parts = colorStr.split(/[\s,]+/).map(Number);
     if (parts.length === 3) {
       if (parts.every(v => v >= 0 && v <= 1)) {
@@ -515,7 +563,6 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
         return `rgb(${parts[0]}, ${parts[1]}, ${parts[2]})`;
       }
     }
-
     return colorStr;
   }
 

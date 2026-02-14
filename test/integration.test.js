@@ -125,12 +125,14 @@ describe('Integration: full TeX to HTML pipeline', () => {
 
   it('handles empty content gracefully', () => {
     const html = renderToHTML('\\begin{document}\\end{document}');
-    expect(html).toBe('');
+    // Layout pipeline always produces at least one page
+    expect(html).toContain('wtc-page');
+    expect(html).toContain('wtc-content');
   });
 
   it('handles file with only preamble', () => {
     const html = renderToHTML('\\documentclass{ltc-guji}\\title{Test}');
-    expect(html).toBe('');
+    expect(html).toContain('wtc-page');
   });
 
   it('getTemplates returns available templates', async () => {

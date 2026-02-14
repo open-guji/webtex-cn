@@ -160,7 +160,6 @@ function renderPreview() {
   }
   try {
     renderToDOM(source, container);
-    paginate();
     updateScale();
     status.textContent = '渲染完成';
   } catch (err) {
@@ -172,73 +171,6 @@ function renderPreview() {
 function debouncedRender() {
   clearTimeout(renderTimer);
   renderTimer = setTimeout(renderPreview, 300);
-}
-
-function paginate() {
-  var page = container.querySelector('.wtc-page');
-  if (!page) return;
-
-  // Remove previously created extra pages
-  container.querySelectorAll('.wtc-page-extra').forEach(function (el) { el.remove(); });
-
-  var rightContent = page.querySelector('.wtc-half-right .wtc-content');
-  var leftContent = page.querySelector('.wtc-half-left .wtc-content');
-  if (!rightContent || !leftContent) return;
-
-  // Measure overflow (overflow:hidden still reports full scrollWidth)
-  var totalWidth = rightContent.scrollWidth;
-  var visibleWidth = rightContent.clientWidth;
-
-  if (totalWidth <= visibleWidth + 2) {
-    leftContent.innerHTML = '';
-    return;
-  }
-
-  // Column metrics
-  var cs = getComputedStyle(page);
-  var nCols = parseInt(cs.getPropertyValue('--wtc-n-cols')) || 8;
-  var colWidth = visibleWidth / nCols;
-  var totalCols = Math.ceil(totalWidth / colWidth);
-  var contentHTML = rightContent.innerHTML;
-
-  // Fill left half of first page (columns nCols+1 to 2*nCols)
-  var offset1 = nCols * colWidth;
-  leftContent.innerHTML = '<div style="position:relative;left:' + offset1 + 'px">' + contentHTML + '</div>';
-
-  // Create additional pages for remaining columns
-  var colsShown = nCols * 2;
-  var remaining = totalCols - colsShown;
-  var pageNum = 1;
-  var prevEl = page;
-  var tmpl = page.getAttribute('data-template') || '';
-  var spreadSetup = page.querySelector('.wtc-spread');
-  var setupStyle = spreadSetup ? spreadSetup.getAttribute('style') || '' : '';
-
-  while (remaining > 0) {
-    var newPage = document.createElement('div');
-    newPage.className = 'wtc-page wtc-page-extra';
-    if (tmpl) newPage.setAttribute('data-template', tmpl);
-
-    var offR = pageNum * 2 * nCols * colWidth;
-    var offL = (pageNum * 2 + 1) * nCols * colWidth;
-    var leftHTML = remaining > nCols
-      ? '<div style="position:relative;left:' + offL + 'px">' + contentHTML + '</div>'
-      : '';
-
-    newPage.innerHTML = '<div class="wtc-spread"' + (setupStyle ? ' style="' + setupStyle + '"' : '') + '>' +
-      '<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">' +
-      '<div style="position:relative;left:' + offR + 'px">' + contentHTML + '</div>' +
-      '</div></div></div>' +
-      '<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content">' +
-      leftHTML +
-      '</div></div></div>' +
-      '</div>';
-
-    prevEl.after(newPage);
-    prevEl = newPage;
-    remaining -= nCols * 2;
-    pageNum++;
-  }
 }
 
 function updateScale() {
