@@ -92,6 +92,23 @@ function newPage() {
   return { items: [], floats: [], halfBoundary: null };
 }
 
+// ---------------------------------------------------------------------------
+// Judou punctuation classification
+// ---------------------------------------------------------------------------
+
+const JUDOU_JU = new Set(['。', '？', '！']);
+const JUDOU_DOU = new Set(['，', '；', '、', '：']);
+const JUDOU_PAIRED_OPEN = new Set(['「', '『', '《', '〈', '（', '【', '〔', '\u2018', '\u201C']);
+const JUDOU_PAIRED_CLOSE = new Set(['」', '』', '》', '〉', '）', '】', '〕', '\u2019', '\u201D']);
+
+function getJudouType(ch) {
+  if (JUDOU_JU.has(ch)) return 'ju';
+  if (JUDOU_DOU.has(ch)) return 'dou';
+  if (JUDOU_PAIRED_OPEN.has(ch)) return 'open';
+  if (JUDOU_PAIRED_CLOSE.has(ch)) return 'close';
+  return null;
+}
+
 export class GridLayoutEngine {
   /**
    * @param {number} nRows  Chars per column
@@ -106,6 +123,9 @@ export class GridLayoutEngine {
     this.currentCol = 0;
     this.currentRow = 0;
     this.currentIndent = 0;
+
+    // Punctuation mode: 'normal', 'judou', 'none'
+    this.punctMode = 'normal';
 
     // Pages
     this.pages = [newPage()];
@@ -385,11 +405,68 @@ export class GridLayoutEngine {
 
   /**
    * Walk TEXT node — advance cursor row by character count.
+   * In judou mode, punctuation is separated and emitted as zero-width items.
+   * Paired punctuation like 《》 wraps text as book-title nodes.
    */
   walkText(node) {
-    const chars = [...(node.value || '')];
-    this.placeItem(node);
-    this.advanceRows(chars.length);
+    const text = node.value || '';
+    if (this.punctMode !== 'judou') {
+      const chars = [...text];
+      this.placeItem(node);
+      this.advanceRows(chars.length);
+      return;
+    }
+
+    // Judou mode: split into segments of (text, punct)
+    const chars = [...text];
+    let buf = '';
+    let i = 0;
+
+    const flushBuf = () => {
+      if (buf.length > 0) {
+        this.placeItem({ type: NodeType.TEXT, value: buf });
+        this.advanceRows([...buf].length);
+        buf = '';
+      }
+    };
+
+    while (i < chars.length) {
+      const ch = chars[i];
+
+      // Book-title brackets: 《...》 or 〈...〉
+      if (ch === '\u300A' || ch === '\u3008') {
+        flushBuf();
+        const closeChar = ch === '\u300A' ? '\u300B' : '\u3009';
+        let inner = '';
+        i++;
+        while (i < chars.length && chars[i] !== closeChar) {
+          inner += chars[i];
+          i++;
+        }
+        if (i < chars.length) i++; // skip closing bracket
+        // Emit as book-title decorated text
+        if (inner.length > 0) {
+          const bookNode = { type: NodeType.BOOK_TITLE, children: [{ type: NodeType.TEXT, value: inner }] };
+          this.placeItem(bookNode);
+          this.advanceRows([...inner].length);
+        }
+        continue;
+      }
+
+      const jType = getJudouType(ch);
+      if (jType === 'ju' || jType === 'dou') {
+        flushBuf();
+        // Emit judou mark as zero-width item (no grid advancement)
+        this.placeItem({ type: 'judou', value: ch, judouType: jType });
+      } else if (jType === 'open' || jType === 'close') {
+        // Other paired punctuation: just skip in judou mode
+        flushBuf();
+      } else {
+        buf += ch;
+      }
+      i++;
+    }
+    flushBuf();
   }
 
   /**
@@ -469,6 +546,13 @@ export function layout(ast) {
   const templateId = resolveTemplateId(ast);
   const { nRows, nCols } = getGridConfig(templateId);
   const engine = new GridLayoutEngine(nRows, nCols);
+
+  // Detect punctuation mode from setup commands
+  for (const cmd of (ast.setupCommands || [])) {
+    if (cmd.setupType === 'judou-on') engine.punctMode = 'judou';
+    else if (cmd.setupType === 'judou-off') engine.punctMode = 'normal';
+    else if (cmd.setupType === 'judou-none') engine.punctMode = 'none';
+  }
 
   // Only layout 'body' nodes — skip preamble paragraphBreaks etc.
   for (const child of ast.children) {

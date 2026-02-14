@@ -457,6 +457,45 @@
   /* Indentation is handled via inline style's padding-inline-start (top) */
 }
 
+/* ---- Judou (句读) marks ---- */
+.wtc-judou {
+  display: inline;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  position: relative;
+  font-size: 0;
+  line-height: 0;
+}
+
+/* 句 (ju): small circle ○ for 。？！ */
+.wtc-judou-ju::after {
+  content: '\25CB';
+  position: absolute;
+  font-size: calc(var(--wtc-font-size) * 0.35);
+  line-height: 1;
+  /* In vertical-rl: left = toward reader (bottom-right of char visually) */
+  left: calc(var(--wtc-font-size) * 0.55);
+  top: calc(var(--wtc-font-size) * -0.35);
+  color: var(--wtc-font-color);
+}
+
+/* 读 (dou): small dot ● for ，；、： */
+.wtc-judou-dou::after {
+  content: '\25CF';
+  position: absolute;
+  font-size: calc(var(--wtc-font-size) * 0.25);
+  line-height: 1;
+  left: calc(var(--wtc-font-size) * 0.6);
+  top: calc(var(--wtc-font-size) * -0.25);
+  color: var(--wtc-font-color);
+}
+
+/* Paired punctuation: hidden in judou mode */
+.wtc-judou-paired {
+  display: none;
+}
+
 /* ---- Stamp (印章) ---- */
 .wtc-stamp {
   position: absolute;

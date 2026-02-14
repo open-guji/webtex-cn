@@ -276,6 +276,19 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     if (item.jiazhuSegments && item.node.type === NodeType.JIAZHU) {
       return this.renderJiazhuFromSegments(item.node, item.jiazhuSegments);
     }
+    // Judou marks: rendered as decorative zero-width spans
+    if (item.node.type === 'judou') {
+      const jType = item.node.judouType;
+      if (jType === 'ju') {
+        return '<span class="wtc-judou wtc-judou-ju"></span>';
+      } else if (jType === 'dou') {
+        return '<span class="wtc-judou wtc-judou-dou"></span>';
+      } else if (jType === 'open' || jType === 'close') {
+        // Paired punctuation: render as small inline mark
+        return `<span class="wtc-judou wtc-judou-paired">${escapeHTML(item.node.value)}</span>`;
+      }
+      return '';
+    }
     return this.renderNode(item.node);
   }
 
