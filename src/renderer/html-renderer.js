@@ -17,6 +17,14 @@ const templateCSSMap = {
   'default': 'siku-quanshu',
 };
 
+// Template → grid config (must match CSS --wtc-n-rows / --wtc-n-cols)
+const templateGridConfig = {
+  'siku-quanshu': { nRows: 21, nCols: 8 },
+  'siku-quanshu-colored': { nRows: 21, nCols: 8 },
+  'honglou': { nRows: 20, nCols: 9 },
+  'minimal': { nRows: 21, nCols: 8 },
+};
+
 /**
  * Escape HTML special characters.
  */
@@ -134,6 +142,11 @@ export class HTMLRenderer {
         if (override) this.templateId = override;
       }
     }
+
+    // Grid config from template
+    const grid = templateGridConfig[this.templateId] || { nRows: 21, nCols: 8 };
+    this.nRows = grid.nRows;
+    this.nCols = grid.nCols;
   }
 
   /**
@@ -335,8 +348,9 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
 
   renderParagraph(node) {
     const indent = parseInt(node.options?.indent || '0', 10);
-    const styleAttr = indent > 0 ? ` style="--wtc-indent: ${indent}"` : '';
-    return `<span class="wtc-paragraph"${styleAttr}>${this.renderChildren(node.children)}</span>`;
+    // Use ideographic spaces (U+3000) for indent — flows naturally in vertical-rl
+    const spacer = indent > 0 ? '\u3000'.repeat(indent) : '';
+    return `<span class="wtc-paragraph">${spacer}${this.renderChildren(node.children)}</span>`;
   }
 
   renderJiazhu(node) {
@@ -364,7 +378,7 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
 
     const text = getPlainText(node.children);
     const align = node.options?.align || 'outward';
-    const segments = splitJiazhuMulti(text, 40, align);
+    const segments = splitJiazhuMulti(text, this.nRows, align);
 
     return segments.map(({ col1, col2 }) =>
       `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${escapeHTML(col1)}</span><span class="wtc-jiazhu-col">${escapeHTML(col2)}</span></span>`

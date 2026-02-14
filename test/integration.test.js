@@ -85,7 +85,7 @@ describe('Integration: full TeX to HTML pipeline', () => {
 
   it('renders paragraph with indent', () => {
     const html = renderToHTML(shiji);
-    expect(html).toContain('--wtc-indent: 3');
+    expect(html).toContain('\u3000\u3000\u3000');
   });
 
   const showcase = `

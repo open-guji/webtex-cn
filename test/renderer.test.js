@@ -52,7 +52,7 @@ describe('HTMLRenderer', () => {
   it('renders paragraph with indent', () => {
     const html = renderTex('\\begin{document}\\begin{正文}\\begin{段落}[indent=2]天地\\end{段落}\\end{正文}\\end{document}');
     expect(html).toContain('wtc-paragraph');
-    expect(html).toContain('--wtc-indent: 2');
+    expect(html).toContain('\u3000\u3000天地');
   });
 
   it('renders emphasis', () => {

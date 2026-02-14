@@ -36,10 +36,10 @@
   /* Background */
   --wtc-page-background: #fff;
 
-  /* Jiazhu: 2 sub-columns must equal 1 main column width.
-     font-size × line-height × 2 = main font-size × main line-height */
-  --wtc-jiazhu-font-size: 0.5em;
-  --wtc-jiazhu-line-height: var(--wtc-line-height);
+  /* Jiazhu: same char height as main text, 2 sub-columns fit in 1 main column.
+     Each sub-column width = font-size × (line-height/2), so 2 cols = 1 main col. */
+  --wtc-jiazhu-font-size: 1em;
+  --wtc-jiazhu-line-height: calc(var(--wtc-line-height) / 2);
   --wtc-jiazhu-color: inherit;
   --wtc-jiazhu-gap: 0px;
 
@@ -154,7 +154,7 @@ body {
   letter-spacing: var(--wtc-letter-spacing);
   color: var(--wtc-font-color);
   height: 100%;
-  overflow: visible;
+  overflow: hidden;
   /* 乌丝栏: inner column border lines */
   --wtc-col-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
   background-origin: content-box;
@@ -230,10 +230,9 @@ body {
 
 /* ---- Paragraph (段落) ---- */
 /* display:inline so paragraph flows with surrounding text.
-   padding-inline-start = top in vertical-rl = indent from column top. */
+   Indent is handled by ideographic spaces in the renderer. */
 .wtc-paragraph {
   display: inline;
-  padding-inline-start: calc(var(--wtc-indent, 0) * 1em);
 }
 
 /* ---- Jiazhu (夹注) ---- */
