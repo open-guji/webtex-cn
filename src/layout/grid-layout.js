@@ -30,40 +30,38 @@ export function getPlainText(children) {
 }
 
 /**
- * Split jiazhu text into two balanced columns.
+ * Split jiazhu text (array of RichChars) into two balanced columns.
  */
-export function splitJiazhu(text, align = 'outward') {
-  const chars = [...text];
-  if (chars.length === 0) return { col1: '', col2: '' };
-  if (chars.length === 1) return { col1: chars[0], col2: '' };
+export function splitJiazhu(richChars, align = 'outward') {
+  if (richChars.length === 0) return { col1: [], col2: [] };
+  if (richChars.length === 1) return { col1: [richChars[0]], col2: [] };
 
   const mid = align === 'inward'
-    ? Math.floor(chars.length / 2)
-    : Math.ceil(chars.length / 2);
+    ? Math.floor(richChars.length / 2)
+    : Math.ceil(richChars.length / 2);
 
   return {
-    col1: chars.slice(0, mid).join(''),
-    col2: chars.slice(mid).join(''),
+    col1: richChars.slice(0, mid),
+    col2: richChars.slice(mid),
   };
 }
 
 /**
- * Split long jiazhu text into multiple dual-column segments.
+ * Split long jiazhu text (array of RichChars) into multiple dual-column segments.
  * firstMaxPerCol allows the first segment to use remaining column space.
  */
-export function splitJiazhuMulti(text, maxCharsPerCol = 20, align = 'outward', firstMaxPerCol = 0) {
+export function splitJiazhuMulti(richChars, maxCharsPerCol = 20, align = 'outward', firstMaxPerCol = 0) {
   const first = firstMaxPerCol > 0 ? firstMaxPerCol : maxCharsPerCol;
-  const chars = [...text];
   const firstChunkSize = first * 2;
-  if (chars.length <= firstChunkSize) {
-    return [splitJiazhu(text, align)];
+  if (richChars.length <= firstChunkSize) {
+    return [splitJiazhu(richChars, align)];
   }
   const segments = [];
-  const firstChunk = chars.slice(0, firstChunkSize).join('');
+  const firstChunk = richChars.slice(0, firstChunkSize);
   segments.push(splitJiazhu(firstChunk, align));
   const fullChunkSize = maxCharsPerCol * 2;
-  for (let i = firstChunkSize; i < chars.length; i += fullChunkSize) {
-    const chunk = chars.slice(i, i + fullChunkSize).join('');
+  for (let i = firstChunkSize; i < richChars.length; i += fullChunkSize) {
+    const chunk = richChars.slice(i, i + fullChunkSize);
     segments.push(splitJiazhu(chunk, align));
   }
   return segments;
@@ -109,6 +107,50 @@ function getJudouType(ch) {
   return null;
 }
 
+/**
+ * Process text into an array of RichChar objects that carry judou metadata.
+ */
+export function getJudouRichText(text, mode = 'normal') {
+  const chars = [...text];
+  if (mode !== 'judou') {
+    return chars.map(ch => ({ char: ch, judouType: null, isBookTitle: false }));
+  }
+
+  const result = [];
+  let isBookTitle = false;
+  let i = 0;
+
+  while (i < chars.length) {
+    const ch = chars[i];
+
+    // Book-title brackets
+    if (ch === '\u300A' || ch === '\u3008') {
+      isBookTitle = true;
+      i++;
+      continue;
+    }
+    if (ch === '\u300B' || ch === '\u3009') {
+      isBookTitle = false;
+      i++;
+      continue;
+    }
+
+    const jType = getJudouType(ch);
+    if (jType === 'ju' || jType === 'dou') {
+      // Attach to the previous character if exists
+      if (result.length > 0) {
+        result[result.length - 1].judouType = jType;
+      }
+    } else if (jType === 'open' || jType === 'close') {
+      // Skip brackets in judou mode (except for book title ones handled above)
+    } else {
+      result.push({ char: ch, judouType: null, isBookTitle });
+    }
+    i++;
+  }
+  return result;
+}
+
 export class GridLayoutEngine {
   /**
    * @param {number} nRows  Chars per column
@@ -129,6 +171,9 @@ export class GridLayoutEngine {
 
     // Temporary flag to ignore paragraph indent for the current column (used by Taitou)
     this.ignoreIndent = false;
+
+    // Track the last occupied grid cell for punctuation attachment
+    this.lastCellPos = { col: 0, row: 0 };
 
     // Pages
     this.pages = [newPage()];
@@ -218,15 +263,19 @@ export class GridLayoutEngine {
    * Preserves the remainder correctly across column and page breaks.
    */
   advanceRows(count) {
-    this.currentRow += count;
-    while (this.currentRow >= this.effectiveRows) {
-      this.currentRow -= this.effectiveRows;
-      this.currentCol++;
-      this.checkHalfBoundary();
-      if (this.currentCol >= this.colsPerSpread) {
-        const remainder = this.currentRow;
-        this.newPageBreak();
-        this.currentRow = remainder;
+    for (let i = 0; i < count; i++) {
+      // Record this cell as "occupied" before advancing
+      this.lastCellPos = { col: this.currentCol, row: this.currentRow };
+
+      this.currentRow++;
+      if (this.currentRow >= this.effectiveRows) {
+        this.currentRow = 0;
+        this.currentCol++;
+        this.ignoreIndent = false;
+        this.checkHalfBoundary();
+        if (this.currentCol >= this.colsPerSpread) {
+          this.newPageBreak();
+        }
       }
     }
   }
@@ -460,8 +509,12 @@ export class GridLayoutEngine {
       const jType = getJudouType(ch);
       if (jType === 'ju' || jType === 'dou') {
         flushBuf();
-        // Emit judou mark as zero-width item (no grid advancement)
-        this.placeItem({ type: 'judou', value: ch, judouType: jType });
+        // Emit judou mark attached to the PREVIOUS cell's coordinates
+        this.currentPage.items.push({
+          node: { type: 'judou', value: ch, judouType: jType },
+          col: this.lastCellPos.col,
+          row: this.lastCellPos.row,
+        });
       } else if (jType === 'open' || jType === 'close') {
         // Other paired punctuation: just skip in judou mode
         flushBuf();
@@ -503,13 +556,13 @@ export class GridLayoutEngine {
       return;
     }
 
-    const jiazhuSegments = splitJiazhuMulti(text, maxPerCol, align, firstMax);
+    const richChars = getJudouRichText(text, this.punctMode);
+    const jiazhuSegments = splitJiazhuMulti(richChars, maxPerCol, align, firstMax);
 
     if (jiazhuSegments.length <= 1) {
       // Single segment: place and advance
       this.placeItem(node, { jiazhuSegments });
-      const totalChars = [...text].length;
-      this.advanceRows(Math.ceil(totalChars / 2));
+      this.advanceRows(Math.ceil(richChars.length / 2));
       return;
     }
 
@@ -525,7 +578,7 @@ export class GridLayoutEngine {
     // Middle and last segments each fill a full column (or partial for last)
     for (let i = 1; i < jiazhuSegments.length; i++) {
       const seg = jiazhuSegments[i];
-      const segRows = Math.max([...seg.col1].length, [...seg.col2].length);
+      const segRows = Math.max(seg.col1.length, seg.col2.length);
       this.placeItem(node, {
         jiazhuSegments: [seg],
         jiazhuSegmentIndex: i,

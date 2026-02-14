@@ -10,6 +10,16 @@ export const commandRegistry = {
   'documentclass': { args: ['optional', 'required'] },
   'title': { args: ['required'] },
   'chapter': { args: ['required'] },
+  '按': { args: ['optional', 'required'], node: 'jiazhu' },
+  '謹按': { alias: '按' },
+  '谨按': { alias: '按' },
+  '案': { alias: '按' },
+  '謹案': { alias: '按' },
+  '谨案': { alias: '按' },
+  '注': { args: ['optional', 'required'], node: 'jiazhu' },
+  '註': { alias: '注' },
+  '標': { args: ['optional', 'required'], node: 'jiazhu' },
+  '提': { alias: '標' },
 
   // Jiazhu (夹注)
   '夹注': { args: ['optional', 'required'], node: 'jiazhu' },

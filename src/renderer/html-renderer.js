@@ -4,7 +4,7 @@
 
 import { NodeType } from '../model/nodes.js';
 import { resolveTemplateId, getGridConfig } from '../config/templates.js';
-import { getPlainText, splitJiazhuMulti, LayoutMarker } from '../layout/grid-layout.js';
+import { getPlainText, splitJiazhuMulti, getJudouRichText, LayoutMarker } from '../layout/grid-layout.js';
 
 // Setup parameter → CSS variable mapping
 const setupParamMap = {
@@ -304,7 +304,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     }
 
     return segments.map(({ col1, col2 }) =>
-      `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${escapeHTML(col1)}</span><span class="wtc-jiazhu-col">${escapeHTML(col2)}</span></span>`
+      `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
     ).join('');
   }
 
@@ -513,20 +513,50 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
     const maxPerCol = this.nRows - this.currentIndent;
     const remaining = maxPerCol - (this.colPos % maxPerCol);
     const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
-    const segments = splitJiazhuMulti(text, maxPerCol, align, firstMax);
 
-    const totalChars = [...text].length;
-    const firstSegChars = firstMax * 2;
-    if (totalChars <= firstSegChars) {
-      this.colPos += Math.ceil(totalChars / 2);
+    // Detect if we should use judou mode (inherited from engine state during layout)
+    // Here we can check a flag, but since HTMLRenderer might be used standalone,
+    // we should ideally have the punctMode passed in or detected.
+    // For now, assume it's controlled by the same logic as the main text if enabled.
+    const punctMode = (this.ast.setupCommands || []).some(cmd => cmd.setupType === 'judou-on') ? 'judou' : 'normal';
+
+    const richChars = getJudouRichText(text, punctMode);
+    const segments = splitJiazhuMulti(richChars, maxPerCol, align, firstMax);
+
+    if (richChars.length <= firstMax * 2) {
+      this.colPos += Math.ceil(richChars.length / 2);
     } else {
       const lastSeg = segments[segments.length - 1];
-      this.colPos = Math.max([...lastSeg.col1].length, [...lastSeg.col2].length);
+      this.colPos = Math.max(lastSeg.col1.length, lastSeg.col2.length);
     }
 
     return segments.map(({ col1, col2 }) =>
-      `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${escapeHTML(col1)}</span><span class="wtc-jiazhu-col">${escapeHTML(col2)}</span></span>`
+      `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
     ).join('');
+  }
+
+  renderRichChars(richChars) {
+    let html = '';
+    let currentInTitle = false;
+
+    const toggleTitle = (isBookTitle) => {
+      if (isBookTitle === currentInTitle) return;
+      if (isBookTitle) html += '<span class="wtc-book-title-mark">';
+      else html += '</span>';
+      currentInTitle = isBookTitle;
+    };
+
+    for (const rc of richChars) {
+      toggleTitle(rc.isBookTitle);
+      html += escapeHTML(rc.char);
+      if (rc.judouType === 'ju') {
+        html += '<span class="wtc-judou wtc-judou-ju"></span>';
+      } else if (rc.judouType === 'dou') {
+        html += '<span class="wtc-judou wtc-judou-dou"></span>';
+      }
+    }
+    toggleTitle(false);
+    return html;
   }
 
   renderJiazhuComplex(node) {

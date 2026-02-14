@@ -460,24 +460,22 @@
 
 /* ---- Judou (句读) marks ---- */
 .wtc-judou {
-  display: inline;
+  display: inline-block;
   width: 0;
   height: 0;
   overflow: visible;
   position: relative;
-  font-size: 0;
-  line-height: 0;
 }
 
 /* 句 (ju): small circle ○ for 。？！ */
 .wtc-judou-ju::after {
   content: '\3002';
   position: absolute;
-  font-size: calc(var(--wtc-font-size));
+  font-size: 1em;
   line-height: 1;
-  /* In vertical-rl: left = toward reader (bottom-right of char visually) */
-  left: calc(var(--wtc-font-size) * -0.1);
-  top: calc(var(--wtc-font-size) * -0.3);
+  /* In vertical-rl: starting from center, move right to edge */
+  left: -0.3em;
+  top: -0.4em;
   color: #c00;
 }
 
@@ -485,10 +483,10 @@
 .wtc-judou-dou::after {
   content: '\3001';
   position: absolute;
-  font-size: calc(var(--wtc-font-size) * 1);
+  font-size: 1.2em;
   line-height: 1;
-  left: calc(var(--wtc-font-size) * -0.1);
-  top: calc(var(--wtc-font-size) * -0.3);
+  left: -0.3em;
+  top: -0.4em;
   color: #c00;
 }
 
