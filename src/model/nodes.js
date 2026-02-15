@@ -35,6 +35,7 @@ export const NodeType = {
   MATH: 'math',
   PARAGRAPH_BREAK: 'paragraphBreak',
   MULU_ITEM: 'muluItem',
+  RELATIVE_TAITOU: 'relativeTaitou',
   UNKNOWN: 'unknown',
 };
 

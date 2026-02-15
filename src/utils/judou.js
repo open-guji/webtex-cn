@@ -21,6 +21,14 @@ export function getJudouType(ch) {
 }
 
 /**
+ * Check if a character is any CJK punctuation (used by 'none' mode to strip all punctuation).
+ */
+export function isCJKPunctuation(ch) {
+  return JUDOU_JU.has(ch) || JUDOU_DOU.has(ch) ||
+    JUDOU_PAIRED_OPEN.has(ch) || JUDOU_PAIRED_CLOSE.has(ch);
+}
+
+/**
  * Process text into an array of RichChar objects that carry judou metadata.
  *
  * @param {string} text
@@ -29,6 +37,14 @@ export function getJudouType(ch) {
  */
 export function getJudouRichText(text, mode = 'normal') {
   const chars = [...text];
+
+  // None mode: strip all punctuation, return plain text only
+  if (mode === 'none') {
+    return chars
+      .filter(ch => !isCJKPunctuation(ch))
+      .map(ch => ({ char: ch, judouType: null, isBookTitle: false }));
+  }
+
   if (mode !== 'judou') {
     return chars.map(ch => ({ char: ch, judouType: null, isBookTitle: false }));
   }

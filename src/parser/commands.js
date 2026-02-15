@@ -285,7 +285,7 @@ export const commandRegistry = {
     args: ['optional'], node: 'relativeTaitou',
     category: 'layout',
     description: 'Relative elevation by N grids from current indent',
-    status: 'partial',
+    status: 'full',
   },
   'XiangDuiTaiTou': { alias: '相对抬头' },
   '相對抬頭': { alias: '相对抬头' },

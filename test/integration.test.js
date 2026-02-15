@@ -167,4 +167,58 @@ describe('Integration: full TeX to HTML pipeline', () => {
     const page = renderToPage('\\documentclass[红楼梦甲戌本]{ltc-guji}\\begin{document}\\begin{正文}text\\end{正文}\\end{document}');
     expect(page).toContain('data-template="honglou"');
   });
+
+  it('无标点模式 strips punctuation from output', () => {
+    const tex = `
+\\documentclass[四库全书]{ltc-guji}
+\\无标点模式
+\\begin{document}
+\\begin{正文}
+天地，玄黄。宇宙「洪荒」
+\\end{正文}
+\\end{document}
+`;
+    const html = renderToHTML(tex);
+    expect(html).toContain('天地');
+    expect(html).toContain('玄黄');
+    expect(html).toContain('宇宙');
+    expect(html).toContain('洪荒');
+    expect(html).not.toContain('，');
+    expect(html).not.toContain('。');
+    expect(html).not.toContain('「');
+    expect(html).not.toContain('」');
+  });
+
+  it('\\设置缩进 affects layout indent', () => {
+    const tex = `
+\\documentclass[四库全书]{ltc-guji}
+\\begin{document}
+\\begin{正文}
+\\设置缩进{3}
+${'天'.repeat(20)}
+\\end{正文}
+\\end{document}
+`;
+    const html = renderToHTML(tex);
+    expect(html).toBeTruthy();
+    // Verify the set-indent marker is present
+    expect(html).toContain('wtc-set-indent');
+  });
+
+  it('\\相对抬头 renders correctly', () => {
+    const tex = `
+\\documentclass[四库全书]{ltc-guji}
+\\begin{document}
+\\begin{正文}
+\\begin{段落}[indent=3]
+天地玄黄\\相对抬头[1]宇宙洪荒
+\\end{段落}
+\\end{正文}
+\\end{document}
+`;
+    const html = renderToHTML(tex);
+    expect(html).toContain('wtc-taitou');
+    expect(html).toContain('天地玄黄');
+    expect(html).toContain('宇宙洪荒');
+  });
 });

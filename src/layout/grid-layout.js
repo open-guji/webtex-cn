@@ -11,7 +11,7 @@ import { NodeType } from '../model/nodes.js';
 import { resolveConfig } from '../model/config.js';
 import { getPlainText } from '../utils/text.js';
 import { splitJiazhuMulti } from '../utils/jiazhu.js';
-import { getJudouType, getJudouRichText } from '../utils/judou.js';
+import { getJudouType, getJudouRichText, isCJKPunctuation } from '../utils/judou.js';
 
 // ---------------------------------------------------------------------------
 // Layout markers — used to wrap compound nodes across page boundaries
@@ -222,6 +222,16 @@ export class GridLayoutEngine {
         break;
       }
 
+      case NodeType.RELATIVE_TAITOU: {
+        this.advanceColumn();
+        const offset = parseInt(node.value, 10) || 0;
+        // Relative: go up by offset from current indent level
+        this.currentRow = Math.max(0, this.currentIndent - offset);
+        this.ignoreIndent = true;
+        this.placeItem(node);
+        break;
+      }
+
       case NodeType.MULU_ITEM: {
         if (this.currentRow > 0) {
           this.advanceColumn();
@@ -279,9 +289,15 @@ export class GridLayoutEngine {
       }
 
       case NodeType.MATH:
-      case NodeType.SET_INDENT:
         this.placeItem(node);
         break;
+
+      case NodeType.SET_INDENT: {
+        const indentVal = parseInt(node.value, 10) || 0;
+        this.currentIndent = indentVal;
+        this.placeItem(node);
+        break;
+      }
 
       default:
         if (node.children && node.children.length > 0) {
@@ -358,6 +374,17 @@ export class GridLayoutEngine {
    */
   walkText(node) {
     const text = node.value || '';
+
+    // None mode: strip all punctuation before placing
+    if (this.punctMode === 'none') {
+      const filtered = [...text].filter(ch => !isCJKPunctuation(ch));
+      if (filtered.length > 0) {
+        this.placeItem({ type: NodeType.TEXT, value: filtered.join('') });
+        this.advanceRows(filtered.length);
+      }
+      return;
+    }
+
     if (this.punctMode !== 'judou') {
       const chars = [...text];
       this.placeItem(node);

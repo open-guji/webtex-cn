@@ -288,6 +288,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
         return '<br class="wtc-column-break">';
 
       case NodeType.TAITOU:
+      case NodeType.RELATIVE_TAITOU:
         return this.renderTaitou(node);
 
       case NodeType.NUOTAI:

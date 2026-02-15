@@ -207,6 +207,101 @@ describe('GridLayoutEngine', () => {
       expect(result.pages[0].items).toHaveLength(0);
     });
   });
+
+  describe('punctuation mode: none (无标点模式)', () => {
+    it('strips punctuation marks from text in none mode', () => {
+      const tex = '\\无标点模式\\begin{document}\\begin{正文}天地，玄黄。\\end{正文}\\end{document}';
+      const result = layoutTex(tex);
+      expect(result.config.punctMode).toBe('none');
+      // Find text items — punctuation should be stripped
+      const textItems = result.pages[0].items.filter(i => i.node.type === 'text');
+      const allText = textItems.map(i => i.node.value).join('');
+      expect(allText).not.toContain('，');
+      expect(allText).not.toContain('。');
+      expect(allText).toContain('天地');
+      expect(allText).toContain('玄黄');
+    });
+
+    it('strips paired punctuation in none mode', () => {
+      const tex = '\\无标点模式\\begin{document}\\begin{正文}「天地」《玄黄》\\end{正文}\\end{document}';
+      const result = layoutTex(tex);
+      const textItems = result.pages[0].items.filter(i => i.node.type === 'text');
+      const allText = textItems.map(i => i.node.value).join('');
+      expect(allText).not.toContain('「');
+      expect(allText).not.toContain('」');
+      expect(allText).not.toContain('《');
+      expect(allText).not.toContain('》');
+      expect(allText).toContain('天地');
+      expect(allText).toContain('玄黄');
+    });
+
+    it('advances cursor by filtered char count only', () => {
+      // '天，地' has 3 chars but only 2 non-punct → cursor advances by 2
+      const engine = new GridLayoutEngine(21, 8);
+      engine.punctMode = 'none';
+      engine.walkNode({ type: 'text', value: '天，地' });
+      expect(engine.currentRow).toBe(2);
+    });
+  });
+
+  describe('\\设置缩进 (SetIndent)', () => {
+    it('sets currentIndent for subsequent text', () => {
+      const engine = new GridLayoutEngine(21, 8);
+      engine.walkNode({ type: 'setIndent', value: '3', children: [] });
+      expect(engine.currentIndent).toBe(3);
+      // effectiveRows should now be 18
+      expect(engine.effectiveRows).toBe(18);
+    });
+
+    it('affects column wrapping for subsequent text', () => {
+      const engine = new GridLayoutEngine(21, 8);
+      // Set indent to 3 → effectiveRows = 18
+      engine.walkNode({ type: 'setIndent', value: '3', children: [] });
+      // 20 chars should wrap: 18 fill col 0, 2 in col 1
+      engine.walkNode({ type: 'text', value: '一二三四五六七八九十壹贰叁肆伍陆柒捌玖拾' });
+      expect(engine.currentCol).toBe(1);
+      expect(engine.currentRow).toBe(2);
+    });
+
+    it('SetIndent 0 resets indent', () => {
+      const engine = new GridLayoutEngine(21, 8);
+      engine.walkNode({ type: 'setIndent', value: '3', children: [] });
+      expect(engine.currentIndent).toBe(3);
+      engine.walkNode({ type: 'setIndent', value: '0', children: [] });
+      expect(engine.currentIndent).toBe(0);
+      expect(engine.effectiveRows).toBe(21);
+    });
+  });
+
+  describe('\\相对抬头 (relative taitou)', () => {
+    it('positions relative to current indent', () => {
+      const engine = new GridLayoutEngine(21, 8);
+      engine.currentIndent = 3;
+      // Place some text first so we're not at col 0 row 0
+      engine.walkNode({ type: 'text', value: '天' });
+      // Relative taitou with offset 1: currentRow = max(0, indent - offset) = max(0, 3-1) = 2
+      engine.walkNode({ type: 'relativeTaitou', value: '1', children: [] });
+      expect(engine.currentRow).toBe(2);
+      expect(engine.ignoreIndent).toBe(true);
+    });
+
+    it('clamps to 0 when offset exceeds indent', () => {
+      const engine = new GridLayoutEngine(21, 8);
+      engine.currentIndent = 2;
+      engine.walkNode({ type: 'text', value: '天' });
+      // Relative taitou with offset 5: max(0, 2-5) = 0
+      engine.walkNode({ type: 'relativeTaitou', value: '5', children: [] });
+      expect(engine.currentRow).toBe(0);
+    });
+
+    it('advances to next column', () => {
+      const engine = new GridLayoutEngine(21, 8);
+      engine.walkNode({ type: 'text', value: '天' });
+      const colBefore = engine.currentCol;
+      engine.walkNode({ type: 'relativeTaitou', value: '1', children: [] });
+      expect(engine.currentCol).toBe(colBefore + 1);
+    });
+  });
 });
 
 describe('splitJiazhu', () => {
