@@ -7,12 +7,20 @@
 export const templateCSSMap = {
   '四库全书': 'siku-quanshu',
   '四庫全書': 'siku-quanshu',
+  'SiKuQuanShu': 'siku-quanshu',
+  'siku-quanshu': 'siku-quanshu',
   '四库全书彩色': 'siku-quanshu-colored',
   '四庫全書彩色': 'siku-quanshu-colored',
+  'SiKuQuanShu-colored': 'siku-quanshu-colored',
+  'siku-quanshu-colored': 'siku-quanshu-colored',
   '红楼梦甲戌本': 'honglou',
   '紅樓夢甲戌本': 'honglou',
+  'HongLou': 'honglou',
+  'honglou': 'honglou',
   '极简': 'minimal',
   '極簡': 'minimal',
+  'Minimal': 'minimal',
+  'minimal': 'minimal',
   'default': 'siku-quanshu',
 };
 

@@ -495,6 +495,7 @@ export const environmentRegistry = {
   },
   '夹注环境': {
     node: 'jiazhu',
+    hasOptions: true,
     category: 'annotation',
     description: 'Jiazhu environment form',
     status: 'full',

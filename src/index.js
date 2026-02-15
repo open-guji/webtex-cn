@@ -13,9 +13,12 @@ import { escapeHTML } from './utils/text.js';
 
 /**
  * Internal helper: run the full pipeline and return structured result.
+ * @param {string} texSource - TeX source code
+ * @param {object} [options] - Pipeline options
+ * @param {string} [options.cfgSource] - .cfg template source for macro expansion
  */
-function runPipeline(texSource) {
-  const { ast, warnings } = parse(texSource);
+function runPipeline(texSource, options = {}) {
+  const { ast, warnings } = parse(texSource, options);
   if (warnings.length > 0) {
     console.warn('[WebTeX-CN] Parse warnings:', warnings);
   }
@@ -38,10 +41,12 @@ function wrapPages(pageHTMLs, templateId) {
  * Parse TeX source, run layout, and render to HTML string.
  * Returns multi-page HTML with each page wrapped in a wtc-page div.
  * @param {string} texSource - TeX source code
+ * @param {object} [options] - Options
+ * @param {string} [options.cfgSource] - .cfg template source for macro expansion
  * @returns {string} HTML content (multiple wtc-page divs)
  */
-export function renderToHTML(texSource) {
-  const { layoutResult, pageHTMLs } = runPipeline(texSource);
+export function renderToHTML(texSource, options = {}) {
+  const { layoutResult, pageHTMLs } = runPipeline(texSource, options);
   return wrapPages(pageHTMLs, layoutResult.templateId);
 }
 
@@ -49,10 +54,12 @@ export function renderToHTML(texSource) {
  * Parse TeX source and render to a full standalone HTML page.
  * Uses the layout pipeline for proper multi-page output.
  * @param {string} texSource - TeX source code
+ * @param {object} [options] - Options
+ * @param {string} [options.cfgSource] - .cfg template source for macro expansion
  * @returns {string} Full HTML page
  */
-export function renderToPage(texSource) {
-  const { ast, layoutResult, pageHTMLs } = runPipeline(texSource);
+export function renderToPage(texSource, options = {}) {
+  const { ast, layoutResult, pageHTMLs } = runPipeline(texSource, options);
   const templateId = layoutResult.templateId;
   const pagesContent = wrapPages(pageHTMLs, templateId);
   return `<!DOCTYPE html>
@@ -77,10 +84,11 @@ ${pagesContent}
  * @param {HTMLElement|string} container - DOM element or CSS selector
  * @param {object} [options] - Render options
  * @param {string} [options.cssBasePath=''] - Base path to CSS files for auto template loading
+ * @param {string} [options.cfgSource] - .cfg template source for macro expansion
  */
 export function renderToDOM(texSource, container, options = {}) {
   const { cssBasePath } = options;
-  const { layoutResult, pageHTMLs } = runPipeline(texSource);
+  const { layoutResult, pageHTMLs } = runPipeline(texSource, options);
 
   const el = typeof container === 'string'
     ? document.querySelector(container)

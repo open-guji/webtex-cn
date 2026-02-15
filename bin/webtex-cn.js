@@ -18,7 +18,24 @@ async function loadLib() {
   const { parse } = await import(join(srcDir, 'parser', 'index.js'));
   const { layout } = await import(join(srcDir, 'layout', 'grid-layout.js'));
   const { HTMLRenderer } = await import(join(srcDir, 'renderer', 'html-renderer.js'));
-  return { parse, layout, HTMLRenderer };
+  const { extractTemplateName } = await import(join(srcDir, 'parser', 'macros.js'));
+  return { parse, layout, HTMLRenderer, extractTemplateName };
+}
+
+/**
+ * Try to load a .cfg file for the given .tex source.
+ * Looks for <templateName>.cfg in the same directory as the .tex file.
+ */
+function loadCfgSource(texSource, inputPath, extractTemplateName) {
+  const templateName = extractTemplateName(texSource);
+  if (!templateName) return null;
+  const texDir = dirname(resolve(inputPath));
+  const cfgPath = join(texDir, `${templateName}.cfg`);
+  if (existsSync(cfgPath)) {
+    console.log(`Loading template config: ${cfgPath}`);
+    return readFileSync(cfgPath, 'utf8');
+  }
+  return null;
 }
 
 function usage() {
@@ -67,9 +84,10 @@ async function buildCommand(inputPath, outputDir) {
     process.exit(1);
   }
 
-  const { parse, layout, HTMLRenderer } = await loadLib();
+  const { parse, layout, HTMLRenderer, extractTemplateName } = await loadLib();
   const texSource = readFileSync(resolve(inputPath), 'utf8');
-  const { ast, warnings } = parse(texSource);
+  const cfgSource = loadCfgSource(texSource, inputPath, extractTemplateName);
+  const { ast, warnings } = parse(texSource, cfgSource ? { cfgSource } : {});
 
   if (warnings.length > 0) {
     console.warn('Parse warnings:');
@@ -124,7 +142,7 @@ async function serveCommand(inputPath, port) {
     process.exit(1);
   }
 
-  const { parse, layout, HTMLRenderer } = await loadLib();
+  const { parse, layout, HTMLRenderer, extractTemplateName } = await loadLib();
   const templatesDir = join(srcDir, 'templates');
 
   const server = createServer((req, res) => {
@@ -133,7 +151,8 @@ async function serveCommand(inputPath, port) {
     // Serve generated HTML
     if (url === '/index.html') {
       const texSource = readFileSync(resolve(inputPath), 'utf8');
-      const { ast } = parse(texSource);
+      const cfgSource = loadCfgSource(texSource, inputPath, extractTemplateName);
+      const { ast } = parse(texSource, cfgSource ? { cfgSource } : {});
       const layoutResult = layout(ast);
       const renderer = new HTMLRenderer(ast);
       const templateId = layoutResult.templateId;
