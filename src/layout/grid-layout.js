@@ -33,8 +33,8 @@ export function getPlainText(children) {
  * Split jiazhu text (array of RichChars) into two balanced columns.
  */
 export function splitJiazhu(richChars, align = 'outward') {
-  if (richChars.length === 0) return { col1: [], col2: [] };
-  if (richChars.length === 1) return { col1: [richChars[0]], col2: [] };
+  if (richChars.length === 0) return { col1: richChars.slice(0, 0), col2: richChars.slice(0, 0) };
+  if (richChars.length === 1) return { col1: richChars.slice(0, 1), col2: richChars.slice(1) };
 
   const mid = align === 'inward'
     ? Math.floor(richChars.length / 2)

@@ -451,6 +451,7 @@
 .wtc-mulu-item {
   display: block;
   vertical-align: top;
+  text-align: start;
   writing-mode: vertical-rl;
   text-orientation: upright;
   height: 100%;
