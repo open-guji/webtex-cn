@@ -24,6 +24,7 @@ export class HTMLRenderer {
     this.nCols = grid.nCols;
     this.currentIndent = 0;
     this.colPos = 0;
+    this.punctMode = (ast.setupCommands || []).some(cmd => cmd.setupType === 'judou-on') ? 'judou' : 'normal';
   }
 
   /**
@@ -35,6 +36,7 @@ export class HTMLRenderer {
  */
   renderFromLayout(layoutResult) {
     const config = layoutResult.config;
+    this.punctMode = config.punctMode || this.punctMode;
     const setupStyles = cssOverridesToStyleAttr(config.cssOverrides);
     const banxin = this.renderBanxinFromMeta(config.meta);
 
@@ -136,11 +138,14 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
 
     for (const item of items) {
       const type = item.node.type;
+
+      // Emit column break for intentional breaks (\\, blank line, \换行)
+      if (type === LayoutMarker.COLUMN_BREAK) {
+        html += '<br class="wtc-newline">';
+        continue;
+      }
+
       if (this.isOpenMarker(type)) {
-        // Non-first list items need a column break to match layout engine's advanceColumn()
-        if (type === LayoutMarker.LIST_ITEM_START && !item.isFirstListItem) {
-          html += '<br class="wtc-newline">';
-        }
         html += this.markerOpenTag(item);
         stack.push(item);
       } else if (this.matchingOpenMarker(type)) {
@@ -349,13 +354,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     const remaining = maxPerCol - (this.colPos % maxPerCol);
     const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
 
-    // Detect if we should use judou mode (inherited from engine state during layout)
-    // Here we can check a flag, but since HTMLRenderer might be used standalone,
-    // we should ideally have the punctMode passed in or detected.
-    // For now, assume it's controlled by the same logic as the main text if enabled.
-    const punctMode = (this.ast.setupCommands || []).some(cmd => cmd.setupType === 'judou-on') ? 'judou' : 'normal';
-
-    const richChars = getJudouRichText(text, punctMode);
+    const richChars = getJudouRichText(text, this.punctMode);
     const segments = splitJiazhuMulti(richChars, maxPerCol, align, firstMax);
 
     if (richChars.length <= firstMax * 2) {
@@ -407,8 +406,15 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
         break;
       }
     }
-    const col1HTML = node.children.slice(0, splitIdx).map(c => this.renderNode(c)).join('');
-    const col2HTML = node.children.slice(splitIdx).map(c => this.renderNode(c)).join('');
+    const renderChild = (c) => {
+      if (c.type === NodeType.TEXT && this.punctMode === 'judou') {
+        const richChars = getJudouRichText(c.value || '', 'judou');
+        return this.renderRichChars(richChars);
+      }
+      return this.renderNode(c);
+    };
+    const col1HTML = node.children.slice(0, splitIdx).map(renderChild).join('');
+    const col2HTML = node.children.slice(splitIdx).map(renderChild).join('');
     return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 

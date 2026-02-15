@@ -26,6 +26,7 @@ export const LayoutMarker = {
   LIST_ITEM_END: '_listItemEnd',
   MULU_ITEM_START: '_muluItemStart',
   MULU_ITEM_END: '_muluItemEnd',
+  COLUMN_BREAK: '_columnBreak',
 };
 
 // ---------------------------------------------------------------------------
@@ -191,7 +192,13 @@ export class GridLayoutEngine {
       case NodeType.NEWLINE:
       case NodeType.PARAGRAPH_BREAK:
       case NodeType.COLUMN_BREAK:
-        this.advanceColumn();
+        // Only emit break if there's content in the current column.
+        // When currentRow === 0 (e.g. after a block element like MULU_ITEM,
+        // or after natural column wrap), the column is already fresh.
+        if (this.currentRow > 0) {
+          this.placeMarker(LayoutMarker.COLUMN_BREAK);
+          this.advanceColumn();
+        }
         break;
 
       case NodeType.JIAZHU:
@@ -224,6 +231,9 @@ export class GridLayoutEngine {
         this.placeMarker(LayoutMarker.MULU_ITEM_START, { level });
         this.walkChildren(node.children);
         this.placeMarker(LayoutMarker.MULU_ITEM_END);
+        // MULU_ITEM renders as display:block with full column height in CSS,
+        // so advance cursor to match — next content starts in a new column.
+        this.advanceColumn();
         break;
       }
 
