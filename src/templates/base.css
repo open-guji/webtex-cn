@@ -77,7 +77,7 @@
   --wtc-book-title-color: #333;
 
   /* Half-page width: one set of columns + banxin + margins */
-  --wtc-half-content-width: calc(var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + 8px);
+  --wtc-half-content-width: calc(var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness));
   --wtc-page-width: calc(var(--wtc-margin-left) + var(--wtc-margin-right) + var(--wtc-banxin-width) + var(--wtc-half-content-width));
   --wtc-page-height: calc(var(--wtc-n-rows) * var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio)) + var(--wtc-margin-top) + var(--wtc-margin-bottom) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + var(--wtc-border-padding-top) + var(--wtc-border-padding-bottom));
 }
@@ -145,7 +145,7 @@
 
 .wtc-content-border>.wtc-content {
   border: var(--wtc-border-thickness) solid var(--wtc-border-color);
-  padding: var(--wtc-border-padding-top) 4px var(--wtc-border-padding-bottom) 4px;
+  padding: var(--wtc-border-padding-top) 0 var(--wtc-border-padding-bottom) 0;
   height: 100%;
 }
 
