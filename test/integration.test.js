@@ -85,9 +85,8 @@ describe('Integration: full TeX to HTML pipeline', () => {
 
   it('renders paragraph with indent', () => {
     const html = renderToHTML(shiji);
-    expect(html).toContain('wtc-paragraph-indent');
-    expect(html).toContain('--wtc-paragraph-indent: calc(3 * var(--wtc-grid-height))');
-    expect(html).toContain('--wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - 3) * var(--wtc-grid-height))');
+    expect(html).toContain('wtc-indent-spacer');
+    expect(html).toContain('--wtc-indent-size: calc(3 * var(--wtc-grid-height))');
   });
 
   const showcase = `

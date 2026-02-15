@@ -4,8 +4,8 @@ exports[`Snapshot: example files > honglou.tex renders consistently 1`] = `
 "<div class="wtc-page" data-template="honglou"><div class="wtc-spread wtc-spread-right">
 <div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">脂硯齋重評石頭記<br class="wtc-newline"><span class="wtc-list"><span class="wtc-list-item">甲戌本
  </span><span class="wtc-list-item">第一回
-</span></span><br class="wtc-newline"><span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(2 * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - 2) * var(--wtc-grid-height))">
-此開卷第一回也作者自云曾歷過一番夢幻之後故將真事隱去而借通靈說此<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">石頭</span><span class="wtc-jiazhu-col">記</span></span>一段故事也
+</span></span><br class="wtc-newline"><span class="wtc-paragraph"><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(2 * var(--wtc-grid-height))"></span>
+此開卷第一回也作者自云曾歷過一番夢幻之後故將真事隱去而借通靈說此<span class="wtc-indent-spacer" style="--wtc-indent-size: calc(2 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">石頭</span><span class="wtc-jiazhu-col">記</span></span>一段故事也
 </span><br class="wtc-newline">列位看官你道此書從何而來說起根由雖近荒唐細按則深有趣味<br class="wtc-newline"><span class="wtc-sidenote">此是第一首標題詩</span>待在下將此來歷註明方使閱者了然不惑<br class="wtc-newline"></div></div></div><div class="wtc-banxin">
   <div class="wtc-banxin-section wtc-banxin-upper">
     <span class="wtc-banxin-book-name">脂硯齋重評石頭記</span>
@@ -70,8 +70,8 @@ exports[`Snapshot: example files > minimal.tex renders consistently 1`] = `
 "<div class="wtc-page" data-template="siku-quanshu"><div class="wtc-spread wtc-spread-right">
 <div class="wtc-pizhu" style="right: 5cm;top: 2cm;">可在任意位置书写批注</div><div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">
 這是古籍竖排的示例，包含夹注<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">长夹注自动换</span><span class="wtc-jiazhu-col">列，并且自动</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">平衡，右列可</span><span class="wtc-jiazhu-col">能多一个字</span></span>的功能演示。<br class="wtc-newline">
-空格需手动声明　　可加入参数。<br class="wtc-newline"><span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(2 * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - 2) * var(--wtc-grid-height))">
- 天地玄黃<br class="wtc-newline">
+空格需手动声明　　可加入参数。<br class="wtc-newline"><span class="wtc-paragraph"><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(2 * var(--wtc-grid-height))"></span>
+ 天地玄黃<br class="wtc-newline"><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(2 * var(--wtc-grid-height))"></span>
  宇宙洪荒
 </span><br class="wtc-newline">侧批<span class="wtc-sidenote">较长侧批可换列</span>可在任意位置插入。<br class="wtc-newline"></div></div></div><div class="wtc-banxin">
   <div class="wtc-banxin-section wtc-banxin-upper">
@@ -111,7 +111,7 @@ exports[`Snapshot: example files > shiji.tex renders consistently 1`] = `
  </span><span class="wtc-list-item">唐國子博士弘文館學士司馬貞索隠
  </span><span class="wtc-list-item">唐諸王侍讀率府長史張守节正义
  </span></span></span><span class="wtc-list-item">五帝本紀第一
-</span></span><br class="wtc-newline"><span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(3 * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - 3) * var(--wtc-grid-height))"><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解裴駰曰凡是徐氏義稱徐姓名以别之餘</span><span class="wtc-jiazhu-col">者悉是駰註解并集衆家義索隠紀者記也本</span></span></span></div></div></div><div class="wtc-banxin">
+</span></span><br class="wtc-newline"><span class="wtc-paragraph"><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(3 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解裴駰曰凡是徐氏義稱徐姓名以别之餘</span><span class="wtc-jiazhu-col">者悉是駰註解并集衆家義索隠紀者記也本</span></span></span></div></div></div><div class="wtc-banxin">
   <div class="wtc-banxin-section wtc-banxin-upper">
     <span class="wtc-banxin-book-name">欽定四庫全書</span>
     <div class="wtc-yuwei wtc-yuwei-upper"></div>
@@ -125,7 +125,7 @@ exports[`Snapshot: example files > shiji.tex renders consistently 1`] = `
 </div>
 </div></div>
 <div class="wtc-page" data-template="siku-quanshu-colored"><div class="wtc-spread wtc-spread-left">
-<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"><span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(3 * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - 3) * var(--wtc-grid-height))"><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">其事而記之故曰本紀又紀理也絲縷有紀而</span><span class="wtc-jiazhu-col">帝王書稱紀者言為後代綱紀也正義鄭玄注</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">中候勅省圖云徳合五帝坐星者稱帝又坤靈</span><span class="wtc-jiazhu-col">圖云徳配天地在正不在私曰帝按太史公依</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">世本大戴禮以黄帝顓頊帝嚳唐堯虞舜為五</span><span class="wtc-jiazhu-col">帝譙周應劭宋均皆同而孔安國尚書序皇甫</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">謐帝王世紀孫氏注世本並以伏犧神農黄帝</span><span class="wtc-jiazhu-col">為三皇少昊顓頊髙辛唐虞為五帝裴松之史</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">目云天子稱本紀諸侯曰世家本者繫其本系</span><span class="wtc-jiazhu-col">故曰本紀者理也統理衆亊繫之年月名之曰</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">紀第者次序之目一者舉數之由故曰五帝本</span><span class="wtc-jiazhu-col">紀第一禮云動則左史書之言則右史書之左</span></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">陽故記動右隂故記言言為尚書事为</span><span class="wtc-jiazhu-col">春秋按春秋时置左右史故云史记</span></span></span><br class="wtc-newline">黄帝者<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解徐廣曰號有熊索隠按有土徳之瑞土色</span><span class="wtc-jiazhu-col">黄故稱黄帝猶神農火徳王而稱炎帝然也此</span></span></div></div></div><div class="wtc-banxin">
+<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"><span class="wtc-paragraph"><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(3 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">其事而記之故曰本紀又紀理也絲縷有紀而</span><span class="wtc-jiazhu-col">帝王書稱紀者言為後代綱紀也正義鄭玄注</span></span><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(3 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">中候勅省圖云徳合五帝坐星者稱帝又坤靈</span><span class="wtc-jiazhu-col">圖云徳配天地在正不在私曰帝按太史公依</span></span><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(3 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">世本大戴禮以黄帝顓頊帝嚳唐堯虞舜為五</span><span class="wtc-jiazhu-col">帝譙周應劭宋均皆同而孔安國尚書序皇甫</span></span><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(3 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">謐帝王世紀孫氏注世本並以伏犧神農黄帝</span><span class="wtc-jiazhu-col">為三皇少昊顓頊髙辛唐虞為五帝裴松之史</span></span><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(3 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">目云天子稱本紀諸侯曰世家本者繫其本系</span><span class="wtc-jiazhu-col">故曰本紀者理也統理衆亊繫之年月名之曰</span></span><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(3 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">紀第者次序之目一者舉數之由故曰五帝本</span><span class="wtc-jiazhu-col">紀第一禮云動則左史書之言則右史書之左</span></span><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(3 * var(--wtc-grid-height))"></span><span class="wtc-jiazhu"><span class="wtc-jiazhu-col">陽故記動右隂故記言言為尚書事为</span><span class="wtc-jiazhu-col">春秋按春秋时置左右史故云史记</span></span></span><br class="wtc-newline">黄帝者<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">集解徐廣曰號有熊索隠按有土徳之瑞土色</span><span class="wtc-jiazhu-col">黄故稱黄帝猶神農火徳王而稱炎帝然也此</span></span></div></div></div><div class="wtc-banxin">
   <div class="wtc-banxin-section wtc-banxin-upper">
     <span class="wtc-banxin-book-name">欽定四庫全書</span>
     <div class="wtc-yuwei wtc-yuwei-upper"></div>
@@ -216,8 +216,8 @@ exports[`Snapshot: example files > showcase.tex renders consistently 1`] = `
 </div>
 </div></div>
 <div class="wtc-page" data-template="siku-quanshu"><div class="wtc-spread wtc-spread-left">
-<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"><br class="wtc-newline"><span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(2 * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - 2) * var(--wtc-grid-height))">
-段落缩进两格的效果<br class="wtc-newline">
+<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"><br class="wtc-newline"><span class="wtc-paragraph"><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(2 * var(--wtc-grid-height))"></span>
+段落缩进两格的效果<br class="wtc-newline"><span class="wtc-indent-spacer" style="--wtc-indent-size: calc(2 * var(--wtc-grid-height))"></span>
 第二列也缩进
 </span><br class="wtc-newline">侧批：天子<span class="wtc-sidenote">此处为侧批</span>诸侯<span class="wtc-sidenote">又一侧批</span>卿大夫<br class="wtc-newline">装饰功能：
 <span class="wtc-emphasis">重要文字</span>需要圈点标注

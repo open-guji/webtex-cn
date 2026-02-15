@@ -74,10 +74,6 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
   markerOpenTag(item) {
     const type = item.node.type;
     if (type === LayoutMarker.PARAGRAPH_START) {
-      const indent = parseInt(item.paragraphNode?.options?.indent || '0', 10);
-      if (indent > 0) {
-        return `<span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(${indent} * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - ${indent}) * var(--wtc-grid-height))">`;
-      }
       return '<span class="wtc-paragraph">';
     }
     if (type === LayoutMarker.LIST_START) return '<span class="wtc-list">';
@@ -131,8 +127,14 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     let html = '';
 
     // Re-open tags from inherited stack
+    // Also recover paragraph indent state from inherited stack
+    let paragraphIndent = 0;
+    let lastCol = -1;
     for (const entry of markerStack) {
       html += this.markerOpenTag(entry);
+      if (entry.node.type === LayoutMarker.PARAGRAPH_START) {
+        paragraphIndent = parseInt(entry.paragraphNode?.options?.indent || '0', 10);
+      }
     }
     const stack = [...markerStack];
 
@@ -148,7 +150,14 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       if (this.isOpenMarker(type)) {
         html += this.markerOpenTag(item);
         stack.push(item);
+        if (type === LayoutMarker.PARAGRAPH_START) {
+          paragraphIndent = parseInt(item.paragraphNode?.options?.indent || '0', 10);
+          lastCol = -1;
+        }
       } else if (this.matchingOpenMarker(type)) {
+        if (type === LayoutMarker.PARAGRAPH_END) {
+          paragraphIndent = 0;
+        }
         html += this.markerCloseTag(this.matchingOpenMarker(type));
         // Pop matching open marker from stack
         for (let i = stack.length - 1; i >= 0; i--) {
@@ -158,6 +167,11 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
           }
         }
       } else {
+        // Emit indent spacer at the start of each column within an indented paragraph
+        if (paragraphIndent > 0 && item.col !== lastCol) {
+          html += `<span class="wtc-indent-spacer" style="--wtc-indent-size: calc(${paragraphIndent} * var(--wtc-grid-height))"></span>`;
+          lastCol = item.col;
+        }
         html += this.renderLayoutItem(item);
       }
     }

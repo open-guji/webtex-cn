@@ -265,17 +265,13 @@
   display: inline;
 }
 
-/* Indented paragraph: inline-block with explicit reduced height.
-   height = (n-rows - indent) × grid-height, so each column fits exactly that many chars.
-   margin-inline-start (= margin-top in vertical-rl) pushes the block down to create
-   the visual indent gap at the top of the first column. */
-.wtc-paragraph-indent {
+/* Indent spacer: zero-width inline-block that pushes content down in vertical-rl.
+   Placed at the start of each column within an indented paragraph. */
+.wtc-indent-spacer {
   display: inline-block;
   vertical-align: top;
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  height: var(--wtc-paragraph-indent-height);
-  margin-inline-start: var(--wtc-paragraph-indent);
+  height: var(--wtc-indent-size);
+  width: 0;
 }
 
 /* ---- Jiazhu (夹注) ---- */
