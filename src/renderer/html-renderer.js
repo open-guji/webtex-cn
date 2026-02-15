@@ -190,6 +190,9 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
    * If the item has pre-computed jiazhuSegments, use those directly.
    */
   renderLayoutItem(item) {
+    if (item.jiazhuComplexSegment && item.node.type === NodeType.JIAZHU) {
+      return this.renderJiazhuComplexSegment(item.jiazhuComplexSegment, item.autoBalance);
+    }
     if (item.jiazhuSegments && item.node.type === NodeType.JIAZHU) {
       return this.renderJiazhuFromSegments(item.node, item.jiazhuSegments);
     }
@@ -365,18 +368,28 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
 
     const text = getPlainText(node.children);
     const align = node.options?.align || 'outward';
+    const autoBalance = node.options?.['auto-balance'] !== 'false';
     const maxPerCol = this.nRows - this.currentIndent;
     const remaining = maxPerCol - (this.colPos % maxPerCol);
     const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
 
     const richChars = getJudouRichText(text, this.punctMode);
-    const segments = splitJiazhuMulti(richChars, maxPerCol, align, firstMax);
+    const segments = splitJiazhuMulti(richChars, maxPerCol, align, firstMax, autoBalance);
 
-    if (richChars.length <= firstMax * 2) {
-      this.colPos += Math.ceil(richChars.length / 2);
+    if (autoBalance) {
+      if (richChars.length <= firstMax * 2) {
+        this.colPos += Math.ceil(richChars.length / 2);
+      } else {
+        const lastSeg = segments[segments.length - 1];
+        this.colPos = Math.max(lastSeg.col1.length, lastSeg.col2.length);
+      }
     } else {
-      const lastSeg = segments[segments.length - 1];
-      this.colPos = Math.max(lastSeg.col1.length, lastSeg.col2.length);
+      if (richChars.length <= firstMax) {
+        this.colPos += richChars.length;
+      } else {
+        const lastSeg = segments[segments.length - 1];
+        this.colPos = lastSeg.col1.length;
+      }
     }
 
     return segments.map(({ col1, col2 }) =>
@@ -430,6 +443,42 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     };
     const col1HTML = node.children.slice(0, splitIdx).map(renderChild).join('');
     const col2HTML = node.children.slice(splitIdx).map(renderChild).join('');
+    return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
+  }
+
+  /**
+   * Render a complex jiazhu segment (from layout walkJiazhuComplex).
+   * Each segment is a slice of children between taitou boundaries.
+   */
+  renderJiazhuComplexSegment(children, autoBalance = true) {
+    const renderChild = (c) => {
+      if (c.type === NodeType.TEXT && this.punctMode === 'judou') {
+        const richChars = getJudouRichText(c.value || '', 'judou');
+        return this.renderRichChars(richChars);
+      }
+      return this.renderNode(c);
+    };
+
+    if (!autoBalance) {
+      const col1HTML = children.map(renderChild).join('');
+      return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col"></span></span>`;
+    }
+
+    // Balanced: split children at character midpoint
+    const text = getPlainText(children);
+    const mid = Math.ceil([...text].length / 2);
+    let charCount = 0;
+    let splitIdx = children.length;
+    for (let i = 0; i < children.length; i++) {
+      const childText = getPlainText([children[i]]);
+      charCount += [...childText].length;
+      if (charCount >= mid) {
+        splitIdx = i + 1;
+        break;
+      }
+    }
+    const col1HTML = children.slice(0, splitIdx).map(renderChild).join('');
+    const col2HTML = children.slice(splitIdx).map(renderChild).join('');
     return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 

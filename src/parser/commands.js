@@ -231,6 +231,12 @@ export const commandRegistry = {
   },
   'HuanHang': { alias: '换行' },
   '換行': { alias: '换行' },
+  'newpage': {
+    args: [], node: 'newPage',
+    category: 'layout',
+    description: 'Force page break',
+    status: 'full',
+  },
 
   // ---- Taitou (抬头) ----
   '抬头': {

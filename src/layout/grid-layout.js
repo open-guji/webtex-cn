@@ -232,6 +232,13 @@ export class GridLayoutEngine {
         break;
       }
 
+      case NodeType.NEW_PAGE: {
+        if (this.currentCol > 0 || this.currentRow > 0) {
+          this.newPageBreak();
+        }
+        break;
+      }
+
       case NodeType.MULU_ITEM: {
         if (this.currentRow > 0) {
           this.advanceColumn();
@@ -463,7 +470,7 @@ export class GridLayoutEngine {
    */
   walkJiazhu(node) {
     const hasComplexChildren = node.children.some(c => c.type !== NodeType.TEXT);
-    const text = getPlainText(node.children);
+    const autoBalance = node.options?.['auto-balance'] !== 'false';
     const align = node.options?.align || 'outward';
     const maxPerCol = this.effectiveRows;
 
@@ -471,20 +478,19 @@ export class GridLayoutEngine {
     const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
 
     if (hasComplexChildren) {
-      // Complex children: place as single item, advance by half chars
-      this.placeItem(node, { jiazhuSegments: null });
-      const totalChars = [...text].length;
-      this.advanceRows(Math.ceil(totalChars / 2));
+      this.walkJiazhuComplex(node, autoBalance);
       return;
     }
 
+    const text = getPlainText(node.children);
     const richChars = getJudouRichText(text, this.punctMode);
-    const jiazhuSegments = splitJiazhuMulti(richChars, maxPerCol, align, firstMax);
+    const jiazhuSegments = splitJiazhuMulti(richChars, maxPerCol, align, firstMax, autoBalance);
 
     if (jiazhuSegments.length <= 1) {
       // Single segment: place and advance
       this.placeItem(node, { jiazhuSegments });
-      this.advanceRows(Math.ceil(richChars.length / 2));
+      const rows = autoBalance ? Math.ceil(richChars.length / 2) : richChars.length;
+      this.advanceRows(rows);
       return;
     }
 
@@ -507,6 +513,58 @@ export class GridLayoutEngine {
         jiazhuTotalSegments: jiazhuSegments.length,
       });
       this.advanceRows(segRows);
+    }
+  }
+
+  /**
+   * Walk jiazhu with complex children (containing taitou/relative-taitou).
+   * Splits children at taitou boundaries, placing each text segment as jiazhu
+   * and executing taitou layout logic at split points.
+   */
+  walkJiazhuComplex(node, autoBalance) {
+    // Split children into segments at TAITOU/RELATIVE_TAITOU boundaries
+    const segments = [];
+    let currentSegment = [];
+
+    for (const child of node.children) {
+      if (child.type === NodeType.TAITOU || child.type === NodeType.RELATIVE_TAITOU) {
+        if (currentSegment.length > 0) {
+          segments.push({ type: 'text', children: currentSegment });
+          currentSegment = [];
+        }
+        segments.push({ type: 'taitou', node: child });
+      } else {
+        currentSegment.push(child);
+      }
+    }
+    if (currentSegment.length > 0) {
+      segments.push({ type: 'text', children: currentSegment });
+    }
+
+    for (const seg of segments) {
+      if (seg.type === 'taitou') {
+        const taitouNode = seg.node;
+        if (taitouNode.type === NodeType.TAITOU) {
+          this.advanceColumn();
+          const level = parseInt(taitouNode.value, 10) || 0;
+          this.currentRow = level;
+          this.ignoreIndent = true;
+        } else {
+          // RELATIVE_TAITOU
+          this.advanceColumn();
+          const offset = parseInt(taitouNode.value, 10) || 0;
+          this.currentRow = Math.max(0, this.currentIndent - offset);
+          this.ignoreIndent = true;
+        }
+      } else {
+        // Text segment: place as jiazhu sub-segment
+        const text = getPlainText(seg.children);
+        const charLen = [...text].length;
+        if (charLen === 0) continue;
+        this.placeItem(node, { jiazhuComplexSegment: seg.children, autoBalance });
+        const rows = autoBalance ? Math.ceil(charLen / 2) : charLen;
+        this.advanceRows(rows);
+      }
     }
   }
 }

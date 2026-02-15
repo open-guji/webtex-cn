@@ -348,3 +348,60 @@ describe('splitJiazhuMulti', () => {
     expect([...result[0].col1].length).toBeLessThanOrEqual(3);
   });
 });
+
+describe('splitJiazhu with balance=false', () => {
+  it('puts all content in col1 when balance is false', () => {
+    const result = splitJiazhu('一二三四五六', 'outward', false);
+    expect(result.col1).toBe('一二三四五六');
+    expect(result.col2).toBe('');
+  });
+
+  it('splitJiazhuMulti uses single-column segments when balance is false', () => {
+    const result = splitJiazhuMulti('一二三四五六七八九十', 5, 'outward', 0, false);
+    expect(result).toHaveLength(2);
+    expect(result[0].col1).toBe('一二三四五');
+    expect(result[0].col2).toBe('');
+    expect(result[1].col1).toBe('六七八九十');
+    expect(result[1].col2).toBe('');
+  });
+});
+
+describe('\\newpage', () => {
+  it('triggers page break in layout engine', () => {
+    const engine = new GridLayoutEngine(21, 8);
+    engine.walkNode({ type: 'text', value: '天地' });
+    expect(engine.pages).toHaveLength(1);
+    engine.walkNode({ type: 'newPage' });
+    expect(engine.pages).toHaveLength(2);
+    expect(engine.currentCol).toBe(0);
+    expect(engine.currentRow).toBe(0);
+  });
+
+  it('does not create empty page when at start', () => {
+    const engine = new GridLayoutEngine(21, 8);
+    engine.walkNode({ type: 'newPage' });
+    expect(engine.pages).toHaveLength(1);
+  });
+});
+
+describe('jiazhu complex children with taitou', () => {
+  it('splits jiazhu at taitou boundaries in layout', () => {
+    const engine = new GridLayoutEngine(21, 8);
+    const jiazhuNode = {
+      type: 'jiazhu',
+      options: { 'auto-balance': 'false' },
+      children: [
+        { type: 'text', value: '前段文字' },
+        { type: 'taitou', value: '1', children: [] },
+        { type: 'text', value: '後段文字' },
+      ],
+    };
+    engine.walkNode(jiazhuNode);
+    // Should have placed items for both text segments with a column advance between
+    const items = engine.pages[0].items;
+    const jiazhuItems = items.filter(i => i.node.type === 'jiazhu');
+    expect(jiazhuItems.length).toBe(2);
+    // The two segments should be in different columns
+    expect(jiazhuItems[1].col).toBeGreaterThan(jiazhuItems[0].col);
+  });
+});

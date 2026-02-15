@@ -220,4 +220,35 @@ ${'天'.repeat(20)}
     expect(html).toContain('天地玄黄');
     expect(html).toContain('宇宙洪荒');
   });
+
+  it('renders \\newpage as page break', () => {
+    const tex = `
+\\begin{document}
+\\begin{正文}
+第一页内容
+\\newpage
+第二页内容
+\\end{正文}
+\\end{document}
+`;
+    const html = renderToHTML(tex);
+    // Should produce two pages
+    const pageCount = (html.match(/wtc-page\b/g) || []).length;
+    expect(pageCount).toBeGreaterThanOrEqual(2);
+    expect(html).toContain('第一页内容');
+    expect(html).toContain('第二页内容');
+  });
+
+  it('renders jiazhu with auto-balance=false as single column', () => {
+    const tex = `
+\\begin{document}
+\\begin{正文}
+天地\\夹注[auto-balance=false]{漢至五代}玄黄
+\\end{正文}
+\\end{document}
+`;
+    const html = renderToHTML(tex);
+    expect(html).toContain('wtc-jiazhu');
+    expect(html).toContain('漢至五代');
+  });
 });
