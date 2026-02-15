@@ -16,8 +16,9 @@ const srcDir = join(__dirname, '..', 'src');
 // Dynamic import of the library
 async function loadLib() {
   const { parse } = await import(join(srcDir, 'parser', 'index.js'));
+  const { layout } = await import(join(srcDir, 'layout', 'grid-layout.js'));
   const { HTMLRenderer } = await import(join(srcDir, 'renderer', 'html-renderer.js'));
-  return { parse, HTMLRenderer };
+  return { parse, layout, HTMLRenderer };
 }
 
 function usage() {
@@ -66,7 +67,7 @@ async function buildCommand(inputPath, outputDir) {
     process.exit(1);
   }
 
-  const { parse, HTMLRenderer } = await loadLib();
+  const { parse, layout, HTMLRenderer } = await loadLib();
   const texSource = readFileSync(resolve(inputPath), 'utf8');
   const { ast, warnings } = parse(texSource);
 
@@ -75,11 +76,14 @@ async function buildCommand(inputPath, outputDir) {
     warnings.forEach(w => console.warn(`  - ${w}`));
   }
 
+  const layoutResult = layout(ast);
   const renderer = new HTMLRenderer(ast);
-  const templateId = renderer.templateId;
+  const templateId = layoutResult.templateId;
+  const pageHTMLs = renderer.renderFromLayout(layoutResult);
+  const pagesContent = pageHTMLs.map(h =>
+    `<div class="wtc-page" data-template="${templateId}">${h}</div>`
+  ).join('\n');
 
-  // Generate standalone HTML page
-  const content = renderer.render();
   const html = `<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -90,9 +94,7 @@ async function buildCommand(inputPath, outputDir) {
 <link rel="stylesheet" href="${templateId}.css">
 </head>
 <body>
-<div class="wtc-page" data-template="${templateId}">
-${content}
-</div>
+${pagesContent}
 </body>
 </html>`;
 
@@ -122,7 +124,7 @@ async function serveCommand(inputPath, port) {
     process.exit(1);
   }
 
-  const { parse, HTMLRenderer } = await loadLib();
+  const { parse, layout, HTMLRenderer } = await loadLib();
   const templatesDir = join(srcDir, 'templates');
 
   const server = createServer((req, res) => {
@@ -132,9 +134,13 @@ async function serveCommand(inputPath, port) {
     if (url === '/index.html') {
       const texSource = readFileSync(resolve(inputPath), 'utf8');
       const { ast } = parse(texSource);
+      const layoutResult = layout(ast);
       const renderer = new HTMLRenderer(ast);
-      const content = renderer.render();
-      const templateId = renderer.templateId;
+      const templateId = layoutResult.templateId;
+      const pageHTMLs = renderer.renderFromLayout(layoutResult);
+      const pagesContent = pageHTMLs.map(h =>
+        `<div class="wtc-page" data-template="${templateId}">${h}</div>`
+      ).join('\n');
 
       const html = `<!DOCTYPE html>
 <html lang="zh">
@@ -146,9 +152,7 @@ async function serveCommand(inputPath, port) {
 <link rel="stylesheet" href="${templateId}.css">
 </head>
 <body>
-<div class="wtc-page" data-template="${templateId}">
-${content}
-</div>
+${pagesContent}
 </body>
 </html>`;
 

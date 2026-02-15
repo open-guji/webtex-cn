@@ -2,12 +2,37 @@
  * WebTeX-CN: Convert luatex-cn TeX files to HTML+CSS
  * Main entry point.
  *
- * Pipeline: parse → layout → render
+ * Pipeline: parse → resolve → layout → render
  */
 
 import { parse } from './parser/index.js';
 import { layout } from './layout/grid-layout.js';
 import { HTMLRenderer } from './renderer/html-renderer.js';
+import { resolveConfig } from './model/config.js';
+import { escapeHTML } from './utils/text.js';
+
+/**
+ * Internal helper: run the full pipeline and return structured result.
+ */
+function runPipeline(texSource) {
+  const { ast, warnings } = parse(texSource);
+  if (warnings.length > 0) {
+    console.warn('[WebTeX-CN] Parse warnings:', warnings);
+  }
+  const layoutResult = layout(ast);
+  const renderer = new HTMLRenderer(ast);
+  const pageHTMLs = renderer.renderFromLayout(layoutResult);
+  return { ast, layoutResult, pageHTMLs };
+}
+
+/**
+ * Internal helper: wrap page HTMLs in wtc-page divs.
+ */
+function wrapPages(pageHTMLs, templateId) {
+  return pageHTMLs.map(html =>
+    `<div class="wtc-page" data-template="${templateId}">${html}</div>`
+  ).join('\n');
+}
 
 /**
  * Parse TeX source, run layout, and render to HTML string.
@@ -16,30 +41,33 @@ import { HTMLRenderer } from './renderer/html-renderer.js';
  * @returns {string} HTML content (multiple wtc-page divs)
  */
 export function renderToHTML(texSource) {
-  const { ast, warnings } = parse(texSource);
-  if (warnings.length > 0) {
-    console.warn('[WebTeX-CN] Parse warnings:', warnings);
-  }
-  const layoutResult = layout(ast);
-  const renderer = new HTMLRenderer(ast);
-  const pageHTMLs = renderer.renderFromLayout(layoutResult);
-  return pageHTMLs.map(html =>
-    `<div class="wtc-page" data-template="${layoutResult.templateId}">${html}</div>`
-  ).join('\n');
+  const { layoutResult, pageHTMLs } = runPipeline(texSource);
+  return wrapPages(pageHTMLs, layoutResult.templateId);
 }
 
 /**
  * Parse TeX source and render to a full standalone HTML page.
+ * Uses the layout pipeline for proper multi-page output.
  * @param {string} texSource - TeX source code
  * @returns {string} Full HTML page
  */
 export function renderToPage(texSource) {
-  const { ast, warnings } = parse(texSource);
-  if (warnings.length > 0) {
-    console.warn('[WebTeX-CN] Parse warnings:', warnings);
-  }
-  const renderer = new HTMLRenderer(ast);
-  return renderer.renderPage();
+  const { ast, layoutResult, pageHTMLs } = runPipeline(texSource);
+  const templateId = layoutResult.templateId;
+  const pagesContent = wrapPages(pageHTMLs, templateId);
+  return `<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHTML(ast.title || 'WebTeX-CN')}</title>
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="${templateId}.css">
+</head>
+<body>
+${pagesContent}
+</body>
+</html>`;
 }
 
 /**
@@ -52,13 +80,7 @@ export function renderToPage(texSource) {
  */
 export function renderToDOM(texSource, container, options = {}) {
   const { cssBasePath } = options;
-  const { ast, warnings } = parse(texSource);
-  if (warnings.length > 0) {
-    console.warn('[WebTeX-CN] Parse warnings:', warnings);
-  }
-  const layoutResult = layout(ast);
-  const renderer = new HTMLRenderer(ast);
-  const pageHTMLs = renderer.renderFromLayout(layoutResult);
+  const { layoutResult, pageHTMLs } = runPipeline(texSource);
 
   const el = typeof container === 'string'
     ? document.querySelector(container)
@@ -70,9 +92,7 @@ export function renderToDOM(texSource, container, options = {}) {
   if (cssBasePath && typeof document !== 'undefined') {
     setTemplate(layoutResult.templateId, cssBasePath);
   }
-  el.innerHTML = pageHTMLs.map(html =>
-    `<div class="wtc-page" data-template="${layoutResult.templateId}">${html}</div>`
-  ).join('\n');
+  el.innerHTML = wrapPages(pageHTMLs, layoutResult.templateId);
 }
 
 /**
@@ -121,9 +141,10 @@ export function setTemplate(templateId, basePath = '') {
 
 // Export for browser global
 if (typeof window !== 'undefined') {
-  window.WebTeX = { render, renderToDOM, renderToHTML, renderToPage, parse, getTemplates, setTemplate };
+  window.WebTeX = { render, renderToDOM, renderToHTML, renderToPage, parse, layout, getTemplates, setTemplate };
 }
 
 export { parse } from './parser/index.js';
 export { layout } from './layout/grid-layout.js';
+export { resolveConfig } from './model/config.js';
 export { HTMLRenderer } from './renderer/html-renderer.js';

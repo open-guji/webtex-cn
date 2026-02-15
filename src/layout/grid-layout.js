@@ -8,64 +8,10 @@
  */
 
 import { NodeType } from '../model/nodes.js';
-import { resolveTemplateId, getGridConfig } from '../config/templates.js';
-
-// ---------------------------------------------------------------------------
-// Helpers (shared with renderer)
-// ---------------------------------------------------------------------------
-
-/**
- * Get plain text content from a list of child nodes.
- */
-export function getPlainText(children) {
-  let text = '';
-  for (const child of children) {
-    if (child.type === NodeType.TEXT) {
-      text += child.value;
-    } else if (child.children && child.children.length > 0) {
-      text += getPlainText(child.children);
-    }
-  }
-  return text;
-}
-
-/**
- * Split jiazhu text (array of RichChars) into two balanced columns.
- */
-export function splitJiazhu(richChars, align = 'outward') {
-  if (richChars.length === 0) return { col1: richChars.slice(0, 0), col2: richChars.slice(0, 0) };
-  if (richChars.length === 1) return { col1: richChars.slice(0, 1), col2: richChars.slice(1) };
-
-  const mid = align === 'inward'
-    ? Math.floor(richChars.length / 2)
-    : Math.ceil(richChars.length / 2);
-
-  return {
-    col1: richChars.slice(0, mid),
-    col2: richChars.slice(mid),
-  };
-}
-
-/**
- * Split long jiazhu text (array of RichChars) into multiple dual-column segments.
- * firstMaxPerCol allows the first segment to use remaining column space.
- */
-export function splitJiazhuMulti(richChars, maxCharsPerCol = 20, align = 'outward', firstMaxPerCol = 0) {
-  const first = firstMaxPerCol > 0 ? firstMaxPerCol : maxCharsPerCol;
-  const firstChunkSize = first * 2;
-  if (richChars.length <= firstChunkSize) {
-    return [splitJiazhu(richChars, align)];
-  }
-  const segments = [];
-  const firstChunk = richChars.slice(0, firstChunkSize);
-  segments.push(splitJiazhu(firstChunk, align));
-  const fullChunkSize = maxCharsPerCol * 2;
-  for (let i = firstChunkSize; i < richChars.length; i += fullChunkSize) {
-    const chunk = richChars.slice(i, i + fullChunkSize);
-    segments.push(splitJiazhu(chunk, align));
-  }
-  return segments;
-}
+import { resolveConfig } from '../model/config.js';
+import { getPlainText } from '../utils/text.js';
+import { splitJiazhuMulti } from '../utils/jiazhu.js';
+import { getJudouType, getJudouRichText } from '../utils/judou.js';
 
 // ---------------------------------------------------------------------------
 // Layout markers — used to wrap compound nodes across page boundaries
@@ -88,67 +34,6 @@ export const LayoutMarker = {
 
 function newPage() {
   return { items: [], floats: [], halfBoundary: null };
-}
-
-// ---------------------------------------------------------------------------
-// Judou punctuation classification
-// ---------------------------------------------------------------------------
-
-const JUDOU_JU = new Set(['。', '？', '！']);
-const JUDOU_DOU = new Set(['，', '；', '、', '：']);
-const JUDOU_PAIRED_OPEN = new Set(['「', '『', '《', '〈', '（', '【', '〔', '\u2018', '\u201C']);
-const JUDOU_PAIRED_CLOSE = new Set(['」', '』', '》', '〉', '）', '】', '〕', '\u2019', '\u201D']);
-
-function getJudouType(ch) {
-  if (JUDOU_JU.has(ch)) return 'ju';
-  if (JUDOU_DOU.has(ch)) return 'dou';
-  if (JUDOU_PAIRED_OPEN.has(ch)) return 'open';
-  if (JUDOU_PAIRED_CLOSE.has(ch)) return 'close';
-  return null;
-}
-
-/**
- * Process text into an array of RichChar objects that carry judou metadata.
- */
-export function getJudouRichText(text, mode = 'normal') {
-  const chars = [...text];
-  if (mode !== 'judou') {
-    return chars.map(ch => ({ char: ch, judouType: null, isBookTitle: false }));
-  }
-
-  const result = [];
-  let isBookTitle = false;
-  let i = 0;
-
-  while (i < chars.length) {
-    const ch = chars[i];
-
-    // Book-title brackets
-    if (ch === '\u300A' || ch === '\u3008') {
-      isBookTitle = true;
-      i++;
-      continue;
-    }
-    if (ch === '\u300B' || ch === '\u3009') {
-      isBookTitle = false;
-      i++;
-      continue;
-    }
-
-    const jType = getJudouType(ch);
-    if (jType === 'ju' || jType === 'dou') {
-      // Attach to the previous character if exists
-      if (result.length > 0) {
-        result[result.length - 1].judouType = jType;
-      }
-    } else if (jType === 'open' || jType === 'close') {
-      // Skip brackets in judou mode (except for book title ones handled above)
-    } else {
-      result.push({ char: ch, judouType: null, isBookTitle });
-    }
-    i++;
-  }
-  return result;
 }
 
 export class GridLayoutEngine {
@@ -600,16 +485,10 @@ export class GridLayoutEngine {
  * @returns {LayoutResult}
  */
 export function layout(ast) {
-  const templateId = resolveTemplateId(ast);
-  const { nRows, nCols } = getGridConfig(templateId);
+  const config = resolveConfig(ast);
+  const { nRows, nCols } = config.grid;
   const engine = new GridLayoutEngine(nRows, nCols);
-
-  // Detect punctuation mode from setup commands
-  for (const cmd of (ast.setupCommands || [])) {
-    if (cmd.setupType === 'judou-on') engine.punctMode = 'judou';
-    else if (cmd.setupType === 'judou-off') engine.punctMode = 'normal';
-    else if (cmd.setupType === 'judou-none') engine.punctMode = 'none';
-  }
+  engine.punctMode = config.punctMode;
 
   // Only layout 'body' nodes — skip preamble paragraphBreaks etc.
   for (const child of ast.children) {
@@ -624,16 +503,11 @@ export function layout(ast) {
     lastPage.halfBoundary = lastPage.items.length;
   }
 
-  const meta = {
-    title: ast.title || '',
-    chapter: ast.chapter || '',
-    setupCommands: ast.setupCommands || [],
-  };
-
   return {
     pages: engine.pages,
-    gridConfig: { nRows, nCols },
-    templateId,
-    meta,
+    gridConfig: config.grid,
+    templateId: config.templateId,
+    meta: config.meta,
+    config,
   };
 }

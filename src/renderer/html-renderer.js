@@ -1,64 +1,17 @@
 /**
- * HTML Renderer: converts Document AST (or LayoutResult) to HTML string.
+ * HTML Renderer: converts LayoutResult to HTML string.
+ *
+ * This module is purely visual — it does NOT compute positions or grid math.
+ * All layout decisions come from the LayoutResult produced by the layout stage.
  */
 
 import { NodeType } from '../model/nodes.js';
 import { resolveTemplateId, getGridConfig } from '../config/templates.js';
-import { getPlainText, splitJiazhuMulti, getJudouRichText, LayoutMarker } from '../layout/grid-layout.js';
-
-// Setup parameter → CSS variable mapping
-const setupParamMap = {
-  content: {
-    'font-size': '--wtc-font-size',
-    'line-height': '--wtc-line-height',
-    'letter-spacing': '--wtc-letter-spacing',
-    'font-color': '--wtc-font-color',
-    'border-color': '--wtc-border-color',
-    'border-thickness': '--wtc-border-thickness',
-  },
-  page: {
-    'page-width': '--wtc-page-width',
-    'page-height': '--wtc-page-height',
-    'margin-top': '--wtc-margin-top',
-    'margin-bottom': '--wtc-margin-bottom',
-    'margin-left': '--wtc-margin-left',
-    'margin-right': '--wtc-margin-right',
-    'background': '--wtc-page-background',
-  },
-  banxin: {
-    'width': '--wtc-banxin-width',
-    'font-size': '--wtc-banxin-font-size',
-  },
-  jiazhu: {
-    'font-size': '--wtc-jiazhu-font-size',
-    'color': '--wtc-jiazhu-color',
-    'line-height': '--wtc-jiazhu-line-height',
-    'gap': '--wtc-jiazhu-gap',
-  },
-  sidenode: {
-    'font-size': '--wtc-sidenote-font-size',
-    'color': '--wtc-sidenote-color',
-  },
-  meipi: {
-    'font-size': '--wtc-meipi-font-size',
-    'color': '--wtc-meipi-color',
-  },
-  pizhu: {
-    'font-size': '--wtc-pizhu-font-size',
-    'color': '--wtc-pizhu-color',
-  },
-};
-
-/**
- * Escape HTML special characters.
- */
-function escapeHTML(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+import { cssOverridesToStyleAttr } from '../model/config.js';
+import { getPlainText, escapeHTML } from '../utils/text.js';
+import { splitJiazhuMulti } from '../utils/jiazhu.js';
+import { getJudouRichText } from '../utils/judou.js';
+import { LayoutMarker } from '../layout/grid-layout.js';
 
 export class HTMLRenderer {
   constructor(ast) {
@@ -74,62 +27,6 @@ export class HTMLRenderer {
   }
 
   /**
-   * Collect CSS variable overrides from setup commands.
-   */
-  getSetupStylesFromCommands(setupCommands) {
-    const overrides = [];
-    for (const cmd of (setupCommands || [])) {
-      const mapping = setupParamMap[cmd.setupType];
-      if (!mapping || !cmd.params) continue;
-      for (const [param, value] of Object.entries(cmd.params)) {
-        const cssVar = mapping[param];
-        if (cssVar) {
-          overrides.push(`${cssVar}: ${value}`);
-        }
-      }
-    }
-    return overrides.length > 0 ? ` style="${overrides.join('; ')}"` : '';
-  }
-
-  getSetupStyles() {
-    return this.getSetupStylesFromCommands(this.ast.setupCommands);
-  }
-
-  // =====================================================================
-  // Legacy render() — walks AST directly (kept for backward compat)
-  // =====================================================================
-
-  render() {
-    let html = '';
-    for (const child of this.ast.children) {
-      html += this.renderNode(child);
-    }
-    return html;
-  }
-
-  renderPage() {
-    const content = this.render();
-    return `<!DOCTYPE html>
-<html lang="zh">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${escapeHTML(this.ast.title || 'WebTeX-CN')}</title>
-<link rel="stylesheet" href="base.css">
-</head>
-<body>
-<div class="wtc-page" data-template="${this.templateId}">
-${content}
-</div>
-</body>
-</html>`;
-  }
-
-  // =====================================================================
-  // New layout-based render pipeline
-  // =====================================================================
-
-  /**
  * Render a LayoutResult into multi-page HTML.
  * Each layout page is split into two visual half-pages, each with its own banxin.
  *
@@ -137,8 +34,9 @@ ${content}
  * @returns {string[]} Array of page HTML strings (two per layout page)
  */
   renderFromLayout(layoutResult) {
-    const setupStyles = this.getSetupStylesFromCommands(layoutResult.meta.setupCommands);
-    const banxin = this.renderBanxinFromMeta(layoutResult.meta);
+    const config = layoutResult.config;
+    const setupStyles = cssOverridesToStyleAttr(config.cssOverrides);
+    const banxin = this.renderBanxinFromMeta(config.meta);
 
     let carryStack = []; // marker stack carried across pages
     const pages = [];
@@ -343,12 +241,6 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       case 'body':
         return this.renderChildren(node.children);
 
-      case NodeType.CONTENT_BLOCK:
-        return this.renderContentBlock(node);
-
-      case NodeType.PARAGRAPH:
-        return this.renderParagraph(node);
-
       case NodeType.TEXT: {
         const val = node.value || '';
         this.colPos += [...val].length;
@@ -426,9 +318,6 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       case NodeType.DECORATE:
         return `<span class="wtc-decorate">${this.renderChildren(node.children)}</span>`;
 
-      case NodeType.LIST:
-        return this.renderList(node);
-
       case NodeType.LIST_ITEM:
         return `<div class="wtc-list-item">${this.renderChildren(node.children)}</div>`;
 
@@ -445,60 +334,6 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
 
   renderChildren(children) {
     return children.map(c => this.renderNode(c)).join('');
-  }
-
-  renderContentBlock(node) {
-    const floatingHTML = [];
-    const inlineChildren = [];
-
-    for (const child of node.children) {
-      if (child.type === NodeType.MEIPI || child.type === NodeType.PIZHU || child.type === NodeType.STAMP) {
-        floatingHTML.push(this.renderNode(child));
-      } else {
-        inlineChildren.push(child);
-      }
-    }
-
-    const inner = inlineChildren.map(c => this.renderNode(c)).join('');
-    const floating = floatingHTML.join('\n');
-    const banxin = this.renderBanxin();
-    const setupStyles = this.getSetupStyles();
-
-    return `<div class="wtc-spread"${setupStyles}>
-${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">${inner}</div></div></div>${banxin}<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content"></div></div></div>
-</div>`;
-  }
-
-  renderBanxin() {
-    if (!this.ast.title && !this.ast.chapter) return '';
-    const title = escapeHTML(this.ast.title || '');
-    const chapterParts = (this.ast.chapter || '').split(/\\\\|\n/).map(s => s.trim()).filter(Boolean);
-    const chapterHTML = chapterParts.map(p => `<span class="wtc-banxin-chapter-part">${escapeHTML(p)}</span>`).join('');
-
-    return `<div class="wtc-banxin">
-  <div class="wtc-banxin-section wtc-banxin-upper">
-    <span class="wtc-banxin-book-name">${title}</span>
-    <div class="wtc-yuwei wtc-yuwei-upper"></div>
-  </div>
-  <div class="wtc-banxin-section wtc-banxin-middle">
-    <div class="wtc-banxin-chapter">${chapterHTML}</div>
-  </div>
-  <div class="wtc-banxin-section wtc-banxin-lower">
-    <div class="wtc-yuwei wtc-yuwei-lower"></div>
-  </div>
-</div>`;
-  }
-
-  renderParagraph(node) {
-    const indent = parseInt(node.options?.indent || '0', 10);
-    if (indent > 0) {
-      const prevIndent = this.currentIndent;
-      this.currentIndent = indent;
-      const inner = this.renderChildren(node.children);
-      this.currentIndent = prevIndent;
-      return `<span class="wtc-paragraph wtc-paragraph-indent" style="--wtc-paragraph-indent: calc(${indent} * var(--wtc-grid-height)); --wtc-paragraph-indent-height: calc((var(--wtc-n-rows) - ${indent}) * var(--wtc-grid-height))">${inner}</span>`;
-    }
-    return `<span class="wtc-paragraph">${this.renderChildren(node.children)}</span>`;
   }
 
   renderJiazhu(node) {
@@ -659,10 +494,6 @@ ${floating}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-bor
   renderNuotai(node) {
     const count = parseInt(node.value, 10) || 1;
     return '\u3000'.repeat(count);
-  }
-
-  renderList(node) {
-    return `<div class="wtc-list">${this.renderChildren(node.children)}</div>`;
   }
 
   renderStamp(node) {

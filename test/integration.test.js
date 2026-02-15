@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderToHTML } from '../src/index.js';
+import { renderToHTML, renderToPage } from '../src/index.js';
 import { parse } from '../src/parser/index.js';
 import { HTMLRenderer } from '../src/renderer/html-renderer.js';
 
@@ -163,12 +163,8 @@ describe('Integration: full TeX to HTML pipeline', () => {
     expect(html).toContain('--wtc-jiazhu-color: blue');
   });
 
-  it('renderToDOM includes data-template attribute', () => {
-    // Since we can't fully test DOM in Node, verify the renderer sets templateId correctly
-    const { ast } = parse('\\documentclass[红楼梦甲戌本]{ltc-guji}\\begin{document}\\begin{正文}text\\end{正文}\\end{document}');
-    const renderer = new HTMLRenderer(ast);
-    expect(renderer.templateId).toBe('honglou');
-    const page = renderer.renderPage();
+  it('renderToPage includes data-template attribute', () => {
+    const page = renderToPage('\\documentclass[红楼梦甲戌本]{ltc-guji}\\begin{document}\\begin{正文}text\\end{正文}\\end{document}');
     expect(page).toContain('data-template="honglou"');
   });
 });

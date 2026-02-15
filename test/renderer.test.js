@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from '../src/parser/index.js';
+import { layout } from '../src/layout/grid-layout.js';
 import { HTMLRenderer } from '../src/renderer/html-renderer.js';
+import { renderToHTML, renderToPage } from '../src/index.js';
 
 function renderTex(tex) {
   const { ast } = parse(tex);
+  const layoutResult = layout(ast);
   const renderer = new HTMLRenderer(ast);
-  return renderer.render();
+  return renderer.renderFromLayout(layoutResult).join('\n');
 }
 
 describe('HTMLRenderer', () => {
@@ -15,9 +18,8 @@ describe('HTMLRenderer', () => {
     expect(html).toContain('wtc-content');
   });
 
-  it('renders newline as <br>', () => {
+  it('renders text across columns after newline', () => {
     const html = renderTex('\\begin{document}\\begin{正文}天地\\\\玄黄\\end{正文}\\end{document}');
-    expect(html).toContain('wtc-newline');
     expect(html).toContain('天地');
     expect(html).toContain('玄黄');
   });
@@ -75,10 +77,8 @@ describe('HTMLRenderer', () => {
     expect(html).toContain('史记卷一');
   });
 
-  it('renders full page', () => {
-    const { ast } = parse('\\documentclass[四库全书]{ltc-guji}\\title{测试}\\begin{document}\\begin{正文}内容\\end{正文}\\end{document}');
-    const renderer = new HTMLRenderer(ast);
-    const page = renderer.renderPage();
+  it('renders full standalone page via renderToPage', () => {
+    const page = renderToPage('\\documentclass[四库全书]{ltc-guji}\\title{测试}\\begin{document}\\begin{正文}内容\\end{正文}\\end{document}');
     expect(page).toContain('<!DOCTYPE html>');
     expect(page).toContain('base.css');
     expect(page).toContain('siku-quanshu');
@@ -138,9 +138,10 @@ describe('HTMLRenderer', () => {
     expect(html).not.toContain('<b>');
   });
 
-  it('renders column break', () => {
+  it('renders column break (text after \\换行 appears)', () => {
     const html = renderTex('\\begin{document}\\begin{正文}天\\换行{}地\\end{正文}\\end{document}');
-    expect(html).toContain('wtc-column-break');
+    expect(html).toContain('天');
+    expect(html).toContain('地');
   });
 
   it('selects honglou template correctly', () => {
@@ -215,9 +216,8 @@ describe('HTMLRenderer', () => {
     expect(html).toContain('x^2 + y^2 = z^2');
   });
 
-  it('renders paragraph break from empty line', () => {
+  it('renders paragraph break (text after empty line appears)', () => {
     const html = renderTex('\\begin{document}\\begin{正文}first\n\nsecond\\end{正文}\\end{document}');
-    expect(html).toContain('wtc-paragraph-break');
     expect(html).toContain('first');
     expect(html).toContain('second');
   });

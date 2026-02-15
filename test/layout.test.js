@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from '../src/parser/index.js';
-import { layout, GridLayoutEngine, splitJiazhu, splitJiazhuMulti } from '../src/layout/grid-layout.js';
+import { layout, GridLayoutEngine } from '../src/layout/grid-layout.js';
+import { splitJiazhu, splitJiazhuMulti } from '../src/utils/jiazhu.js';
 
 function layoutTex(tex) {
   const { ast } = parse(tex);
@@ -178,7 +179,7 @@ describe('GridLayoutEngine', () => {
     it('collects setup commands', () => {
       const tex = '\\contentSetup{font-size=16px}\\begin{document}\\begin{正文}text\\end{正文}\\end{document}';
       const result = layoutTex(tex);
-      expect(result.meta.setupCommands.length).toBeGreaterThanOrEqual(1);
+      expect(result.config.setupCommands.length).toBeGreaterThanOrEqual(1);
     });
   });
 
