@@ -368,7 +368,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
 
     const text = getPlainText(node.children);
     const align = node.options?.align || 'outward';
-    const autoBalance = node.options?.['auto-balance'] !== 'false';
+    const autoBalance = (node.options?.['auto-balance'] ?? node.options?.['自动均衡']) !== 'false';
     const maxPerCol = this.nRows - this.currentIndent;
     const remaining = maxPerCol - (this.colPos % maxPerCol);
     const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
@@ -376,20 +376,11 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     const richChars = getJudouRichText(text, this.punctMode);
     const segments = splitJiazhuMulti(richChars, maxPerCol, align, firstMax, autoBalance);
 
-    if (autoBalance) {
-      if (richChars.length <= firstMax * 2) {
-        this.colPos += Math.ceil(richChars.length / 2);
-      } else {
-        const lastSeg = segments[segments.length - 1];
-        this.colPos = Math.max(lastSeg.col1.length, lastSeg.col2.length);
-      }
+    if (richChars.length <= firstMax * 2) {
+      this.colPos += Math.ceil(richChars.length / 2);
     } else {
-      if (richChars.length <= firstMax) {
-        this.colPos += richChars.length;
-      } else {
-        const lastSeg = segments[segments.length - 1];
-        this.colPos = lastSeg.col1.length;
-      }
+      const lastSeg = segments[segments.length - 1];
+      this.colPos = Math.max(lastSeg.col1.length, lastSeg.col2.length);
     }
 
     return segments.map(({ col1, col2 }) =>
@@ -459,14 +450,19 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       return this.renderNode(c);
     };
 
+    const text = getPlainText(children);
+    const totalChars = [...text].length;
+    const maxPerCol = this.nRows - this.currentIndent;
+
+    // Determine split point
+    let mid;
     if (!autoBalance) {
-      const col1HTML = children.map(renderChild).join('');
-      return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col"></span></span>`;
+      // Unbalanced: col1 fills up to maxPerCol, remainder in col2
+      mid = Math.min(totalChars, maxPerCol);
+    } else {
+      mid = Math.ceil(totalChars / 2);
     }
 
-    // Balanced: split children at character midpoint
-    const text = getPlainText(children);
-    const mid = Math.ceil([...text].length / 2);
     let charCount = 0;
     let splitIdx = children.length;
     for (let i = 0; i < children.length; i++) {

@@ -4,19 +4,23 @@
  */
 
 /**
- * Split jiazhu text (array of RichChars) into two balanced columns.
+ * Split jiazhu text (array of RichChars) into two columns.
+ * When balance=true (default), splits evenly (balanced columns).
+ * When balance=false, col1 fills up to maxPerCol first, remainder goes to col2.
  */
-export function splitJiazhu(richChars, align = 'outward', balance = true) {
-  if (!balance) {
-    // No balancing: all content in col1, col2 empty
-    return { col1: richChars, col2: richChars.slice(0, 0) };
-  }
+export function splitJiazhu(richChars, align = 'outward', balance = true, maxPerCol = 0) {
   if (richChars.length === 0) return { col1: richChars.slice(0, 0), col2: richChars.slice(0, 0) };
   if (richChars.length === 1) return { col1: richChars.slice(0, 1), col2: richChars.slice(1) };
 
-  const mid = align === 'inward'
-    ? Math.floor(richChars.length / 2)
-    : Math.ceil(richChars.length / 2);
+  let mid;
+  if (!balance && maxPerCol > 0) {
+    // Unbalanced: col1 fills to maxPerCol, remainder in col2
+    mid = Math.min(richChars.length, maxPerCol);
+  } else {
+    mid = align === 'inward'
+      ? Math.floor(richChars.length / 2)
+      : Math.ceil(richChars.length / 2);
+  }
 
   return {
     col1: richChars.slice(0, mid),
@@ -29,31 +33,18 @@ export function splitJiazhu(richChars, align = 'outward', balance = true) {
  * firstMaxPerCol allows the first segment to use remaining column space.
  */
 export function splitJiazhuMulti(richChars, maxCharsPerCol = 20, align = 'outward', firstMaxPerCol = 0, balance = true) {
-  if (!balance) {
-    // No balancing: single-column mode, each segment fills col1 only
-    const first = firstMaxPerCol > 0 ? firstMaxPerCol : maxCharsPerCol;
-    if (richChars.length <= first) {
-      return [splitJiazhu(richChars, align, false)];
-    }
-    const segments = [];
-    segments.push(splitJiazhu(richChars.slice(0, first), align, false));
-    for (let i = first; i < richChars.length; i += maxCharsPerCol) {
-      segments.push(splitJiazhu(richChars.slice(i, i + maxCharsPerCol), align, false));
-    }
-    return segments;
-  }
   const first = firstMaxPerCol > 0 ? firstMaxPerCol : maxCharsPerCol;
   const firstChunkSize = first * 2;
   if (richChars.length <= firstChunkSize) {
-    return [splitJiazhu(richChars, align)];
+    return [splitJiazhu(richChars, align, balance, first)];
   }
   const segments = [];
   const firstChunk = richChars.slice(0, firstChunkSize);
-  segments.push(splitJiazhu(firstChunk, align));
+  segments.push(splitJiazhu(firstChunk, align, balance, first));
   const fullChunkSize = maxCharsPerCol * 2;
   for (let i = firstChunkSize; i < richChars.length; i += fullChunkSize) {
     const chunk = richChars.slice(i, i + fullChunkSize);
-    segments.push(splitJiazhu(chunk, align));
+    segments.push(splitJiazhu(chunk, align, balance, maxCharsPerCol));
   }
   return segments;
 }

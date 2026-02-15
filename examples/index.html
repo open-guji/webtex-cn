@@ -234,6 +234,28 @@
     let renderTimer = null;
     let currentPage = 1;
     let totalPages = 1;
+    let currentCfgSource = null; // Loaded .cfg source for macro expansion
+
+    /**
+     * Extract template name from \documentclass[templateName]{...}
+     */
+    function extractTemplateName(source) {
+      const match = source.match(/\\documentclass\s*\[([^\]]*)\]\s*\{[^}]*\}/);
+      return match ? match[1].trim() : null;
+    }
+
+    /**
+     * Try to load .cfg file for the current TeX source.
+     */
+    async function loadCfgForSource(source) {
+      const templateName = extractTemplateName(source);
+      if (!templateName) return null;
+      try {
+        const resp = await fetch(`${encodeURIComponent(templateName)}.cfg`);
+        if (resp.ok) return await resp.text();
+      } catch (e) { /* ignore */ }
+      return null;
+    }
 
     function renderPreview(maintainPage = true) {
       const source = texSource.value;
@@ -243,7 +265,8 @@
         return;
       }
       try {
-        renderToDOM(source, container);
+        const options = currentCfgSource ? { cfgSource: currentCfgSource } : {};
+        renderToDOM(source, container, options);
         const pages = container.querySelectorAll('.wtc-page');
         totalPages = pages.length;
 
@@ -324,7 +347,13 @@
       try {
         const response = await fetch(filename);
         if (!response.ok) throw new Error('HTTP ' + response.status);
-        texSource.value = await response.text();
+        const source = await response.text();
+        texSource.value = source;
+        // Auto-load .cfg file for macro expansion
+        currentCfgSource = await loadCfgForSource(source);
+        if (currentCfgSource) {
+          status.textContent = '已加载模板配置，渲染中...';
+        }
         renderPreview(currentPage > 1); // Maintain page if we came from URL
       } catch (err) {
         status.textContent = '错误: ' + err.message;

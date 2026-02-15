@@ -58,6 +58,7 @@ export class Parser {
       } else if (token.type === TokenType.EOF) {
         break;
       } else {
+        if (token.type === TokenType.COMMAND) content += '\\';
         content += token.value;
         this.advance();
       }
@@ -90,6 +91,7 @@ export class Parser {
       } else if (token.type === TokenType.EOF) {
         break;
       } else {
+        if (token.type === TokenType.COMMAND) content += '\\';
         content += token.value;
         this.advance();
       }

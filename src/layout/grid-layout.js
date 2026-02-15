@@ -470,7 +470,7 @@ export class GridLayoutEngine {
    */
   walkJiazhu(node) {
     const hasComplexChildren = node.children.some(c => c.type !== NodeType.TEXT);
-    const autoBalance = node.options?.['auto-balance'] !== 'false';
+    const autoBalance = (node.options?.['auto-balance'] ?? node.options?.['自动均衡']) !== 'false';
     const align = node.options?.align || 'outward';
     const maxPerCol = this.effectiveRows;
 
@@ -489,7 +489,7 @@ export class GridLayoutEngine {
     if (jiazhuSegments.length <= 1) {
       // Single segment: place and advance
       this.placeItem(node, { jiazhuSegments });
-      const rows = autoBalance ? Math.ceil(richChars.length / 2) : richChars.length;
+      const rows = Math.ceil(richChars.length / 2);
       this.advanceRows(rows);
       return;
     }
@@ -556,13 +556,15 @@ export class GridLayoutEngine {
           this.currentRow = Math.max(0, this.currentIndent - offset);
           this.ignoreIndent = true;
         }
+        // Place the taitou node so the renderer emits <br> + spacer
+        this.placeItem(taitouNode);
       } else {
         // Text segment: place as jiazhu sub-segment
         const text = getPlainText(seg.children);
         const charLen = [...text].length;
         if (charLen === 0) continue;
         this.placeItem(node, { jiazhuComplexSegment: seg.children, autoBalance });
-        const rows = autoBalance ? Math.ceil(charLen / 2) : charLen;
+        const rows = Math.ceil(charLen / 2);
         this.advanceRows(rows);
       }
     }

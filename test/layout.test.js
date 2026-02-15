@@ -350,19 +350,26 @@ describe('splitJiazhuMulti', () => {
 });
 
 describe('splitJiazhu with balance=false', () => {
-  it('puts all content in col1 when balance is false', () => {
-    const result = splitJiazhu('一二三四五六', 'outward', false);
-    expect(result.col1).toBe('一二三四五六');
-    expect(result.col2).toBe('');
+  it('fills col1 first, remainder in col2 when balance is false', () => {
+    // With maxPerCol=5, 6 chars -> col1 gets 5, col2 gets 1
+    const result = splitJiazhu('一二三四五六', 'outward', false, 5);
+    expect(result.col1).toBe('一二三四五');
+    expect(result.col2).toBe('六');
   });
 
-  it('splitJiazhuMulti uses single-column segments when balance is false', () => {
+  it('without maxPerCol, falls back to balanced split', () => {
+    // No maxPerCol: uses balanced midpoint
+    const result = splitJiazhu('一二三四五六', 'outward', false);
+    expect(result.col1).toBe('一二三');
+    expect(result.col2).toBe('四五六');
+  });
+
+  it('splitJiazhuMulti with balance=false fills col1 first per segment', () => {
+    // 10 chars, maxPerCol=5 -> 1 segment of 10 chars, col1=5, col2=5
     const result = splitJiazhuMulti('一二三四五六七八九十', 5, 'outward', 0, false);
-    expect(result).toHaveLength(2);
+    expect(result).toHaveLength(1);
     expect(result[0].col1).toBe('一二三四五');
-    expect(result[0].col2).toBe('');
-    expect(result[1].col1).toBe('六七八九十');
-    expect(result[1].col2).toBe('');
+    expect(result[0].col2).toBe('六七八九十');
   });
 });
 
