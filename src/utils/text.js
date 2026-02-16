@@ -31,6 +31,79 @@ export function escapeHTML(str) {
 }
 
 /**
+ * Count characters in AST children (same as getPlainText but only counts).
+ */
+function countChars(children) {
+  let count = 0;
+  for (const child of children) {
+    if (child.type === NodeType.TEXT) {
+      count += [...(child.value || '')].length;
+    } else if (child.children && child.children.length > 0) {
+      count += countChars(child.children);
+    }
+  }
+  return count;
+}
+
+/**
+ * Split AST children at a character boundary.
+ * Returns { before, after } where 'before' contains exactly charCount characters.
+ * TEXT nodes may be split mid-node. Wrapper nodes are duplicated if split mid-way.
+ */
+export function splitChildrenAtCharCount(children, charCount) {
+  const before = [];
+  const after = [];
+  let remaining = charCount;
+
+  for (let i = 0; i < children.length; i++) {
+    if (remaining <= 0) {
+      after.push(...children.slice(i));
+      break;
+    }
+
+    const child = children[i];
+
+    if (child.type === NodeType.TEXT) {
+      const chars = [...(child.value || '')];
+      if (chars.length <= remaining) {
+        before.push(child);
+        remaining -= chars.length;
+      } else {
+        // Split mid-text
+        before.push({ type: NodeType.TEXT, value: chars.slice(0, remaining).join('') });
+        after.push({ type: NodeType.TEXT, value: chars.slice(remaining).join('') });
+        remaining = 0;
+        after.push(...children.slice(i + 1));
+        break;
+      }
+    } else if (child.children && child.children.length > 0) {
+      const childCharCount = countChars(child.children);
+      if (childCharCount <= remaining) {
+        before.push(child);
+        remaining -= childCharCount;
+      } else {
+        // Split inside wrapper node
+        const inner = splitChildrenAtCharCount(child.children, remaining);
+        if (inner.before.length > 0) {
+          before.push({ ...child, children: inner.before });
+        }
+        if (inner.after.length > 0) {
+          after.push({ ...child, children: inner.after });
+        }
+        remaining = 0;
+        after.push(...children.slice(i + 1));
+        break;
+      }
+    } else {
+      // Non-text leaf with no children (e.g., space, newline) — treat as 0 chars
+      before.push(child);
+    }
+  }
+
+  return { before, after };
+}
+
+/**
  * Parse a color string (CSS name, RGB tuple, or 0-1 float triple) to CSS color.
  */
 export function parseColor(colorStr) {

@@ -9,7 +9,7 @@
 
 import { NodeType } from '../model/nodes.js';
 import { resolveConfig } from '../model/config.js';
-import { getPlainText } from '../utils/text.js';
+import { getPlainText, splitChildrenAtCharCount } from '../utils/text.js';
 import { splitJiazhuMulti } from '../utils/jiazhu.js';
 import { getJudouType, getJudouRichText, isCJKPunctuation } from '../utils/judou.js';
 
@@ -28,6 +28,35 @@ export const LayoutMarker = {
   MULU_ITEM_END: '_muluItemEnd',
   COLUMN_BREAK: '_columnBreak',
 };
+
+/**
+ * Split AST children into multiple sub-segments, each fitting in one column pair.
+ * @param {Array} children  AST child nodes
+ * @param {number} fullMaxChars  Max chars per full column pair (maxPerCol * 2)
+ * @param {number} firstMaxChars  Max chars for the first segment (remaining * 2)
+ * @returns {Array<Array>} Array of child arrays
+ */
+function splitChildrenMulti(children, fullMaxChars, firstMaxChars) {
+  const segments = [];
+  let rest = children;
+  let maxChars = firstMaxChars;
+
+  while (rest.length > 0) {
+    const totalChars = [...getPlainText(rest)].length;
+    if (totalChars <= maxChars) {
+      segments.push(rest);
+      break;
+    }
+    const { before, after } = splitChildrenAtCharCount(rest, maxChars);
+    if (before.length > 0) {
+      segments.push(before);
+    }
+    rest = after;
+    maxChars = fullMaxChars; // subsequent segments use full column capacity
+  }
+
+  return segments;
+}
 
 // ---------------------------------------------------------------------------
 // GridLayoutEngine
@@ -172,6 +201,11 @@ export class GridLayoutEngine {
   walkNode(node) {
     if (!node) return;
 
+    // Clear afterParagraph flag for any node except PARAGRAPH_BREAK
+    if (node.type !== NodeType.PARAGRAPH_BREAK) {
+      this.afterParagraph = false;
+    }
+
     switch (node.type) {
       case 'body':
         this.walkChildren(node.children);
@@ -190,11 +224,21 @@ export class GridLayoutEngine {
         break;
 
       case NodeType.NEWLINE:
-      case NodeType.PARAGRAPH_BREAK:
       case NodeType.COLUMN_BREAK:
         // Only emit break if there's content in the current column.
         // When currentRow === 0 (e.g. after a block element like MULU_ITEM,
         // or after natural column wrap), the column is already fresh.
+        if (this.currentRow > 0) {
+          this.placeMarker(LayoutMarker.COLUMN_BREAK);
+          this.advanceColumn();
+        }
+        break;
+
+      case NodeType.PARAGRAPH_BREAK:
+        // Skip if we just ended a paragraph — the paragraph boundary is
+        // enough separation; an extra blank line between two paragraphs
+        // should not produce an additional empty column.
+        if (this.afterParagraph) break;
         if (this.currentRow > 0) {
           this.placeMarker(LayoutMarker.COLUMN_BREAK);
           this.advanceColumn();
@@ -337,11 +381,18 @@ export class GridLayoutEngine {
     const prevIndent = this.currentIndent;
     this.currentIndent = indent;
 
+    // If current position is past the effective area for this indent,
+    // advance to a fresh column before starting the paragraph.
+    if (this.currentRow >= this.nRows - indent && this.currentRow > 0) {
+      this.advanceColumn();
+    }
+
     this.placeMarker(LayoutMarker.PARAGRAPH_START, { paragraphNode: node });
     this.walkChildren(node.children);
     this.placeMarker(LayoutMarker.PARAGRAPH_END);
 
     this.currentIndent = prevIndent;
+    this.afterParagraph = true;
   }
 
   /**
@@ -559,13 +610,47 @@ export class GridLayoutEngine {
         // Place the taitou node so the renderer emits <br> + spacer
         this.placeItem(taitouNode);
       } else {
-        // Text segment: place as jiazhu sub-segment
+        // Text segment: split into column-sized sub-segments if needed
         const text = getPlainText(seg.children);
         const charLen = [...text].length;
         if (charLen === 0) continue;
-        this.placeItem(node, { jiazhuComplexSegment: seg.children, autoBalance });
-        const rows = Math.ceil(charLen / 2);
-        this.advanceRows(rows);
+
+        const maxPerCol = this.effectiveRows;
+        const remaining = maxPerCol - this.currentRow;
+        const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
+        const firstMaxChars = firstMax * 2;
+        const fullMaxChars = maxPerCol * 2;
+
+        if (charLen <= firstMaxChars) {
+          // Fits in remaining column space — single item
+          this.placeItem(node, { jiazhuComplexSegment: seg.children, autoBalance });
+          const rows = Math.ceil(charLen / 2);
+          this.advanceRows(rows);
+        } else {
+          // Split into multiple sub-segments
+          const subSegments = splitChildrenMulti(seg.children, fullMaxChars, firstMaxChars);
+
+          // First sub-segment uses remaining column space
+          this.placeItem(node, {
+            jiazhuComplexSegment: subSegments[0],
+            autoBalance,
+            jiazhuComplexMaxPerCol: firstMax,
+          });
+          this.advanceRows(firstMax);
+
+          // Subsequent sub-segments each get a full column
+          for (let si = 1; si < subSegments.length; si++) {
+            const subText = getPlainText(subSegments[si]);
+            const subCharLen = [...subText].length;
+            const segRows = Math.ceil(subCharLen / 2);
+            this.placeItem(node, {
+              jiazhuComplexSegment: subSegments[si],
+              autoBalance,
+              jiazhuComplexMaxPerCol: maxPerCol,
+            });
+            this.advanceRows(segRows);
+          }
+        }
       }
     }
   }

@@ -8,7 +8,7 @@
 import { NodeType } from '../model/nodes.js';
 import { resolveTemplateId, getGridConfig } from '../config/templates.js';
 import { cssOverridesToStyleAttr } from '../model/config.js';
-import { getPlainText, escapeHTML } from '../utils/text.js';
+import { getPlainText, escapeHTML, splitChildrenAtCharCount } from '../utils/text.js';
 import { splitJiazhuMulti } from '../utils/jiazhu.js';
 import { getJudouRichText } from '../utils/judou.js';
 import { LayoutMarker } from '../layout/grid-layout.js';
@@ -191,7 +191,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
    */
   renderLayoutItem(item) {
     if (item.jiazhuComplexSegment && item.node.type === NodeType.JIAZHU) {
-      return this.renderJiazhuComplexSegment(item.jiazhuComplexSegment, item.autoBalance);
+      return this.renderJiazhuComplexSegment(item.jiazhuComplexSegment, item.autoBalance, item.jiazhuComplexMaxPerCol);
     }
     if (item.jiazhuSegments && item.node.type === NodeType.JIAZHU) {
       return this.renderJiazhuFromSegments(item.node, item.jiazhuSegments);
@@ -415,16 +415,6 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
   renderJiazhuComplex(node) {
     const text = getPlainText(node.children);
     const mid = Math.ceil([...text].length / 2);
-    let charCount = 0;
-    let splitIdx = node.children.length;
-    for (let i = 0; i < node.children.length; i++) {
-      const childText = getPlainText([node.children[i]]);
-      charCount += [...childText].length;
-      if (charCount >= mid) {
-        splitIdx = i + 1;
-        break;
-      }
-    }
     const renderChild = (c) => {
       if (c.type === NodeType.TEXT && this.punctMode === 'judou') {
         const richChars = getJudouRichText(c.value || '', 'judou');
@@ -432,8 +422,9 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       }
       return this.renderNode(c);
     };
-    const col1HTML = node.children.slice(0, splitIdx).map(renderChild).join('');
-    const col2HTML = node.children.slice(splitIdx).map(renderChild).join('');
+    const { before, after } = splitChildrenAtCharCount(node.children, mid);
+    const col1HTML = before.map(renderChild).join('');
+    const col2HTML = after.map(renderChild).join('');
     return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 
@@ -441,7 +432,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
    * Render a complex jiazhu segment (from layout walkJiazhuComplex).
    * Each segment is a slice of children between taitou boundaries.
    */
-  renderJiazhuComplexSegment(children, autoBalance = true) {
+  renderJiazhuComplexSegment(children, autoBalance = true, segMaxPerCol) {
     const renderChild = (c) => {
       if (c.type === NodeType.TEXT && this.punctMode === 'judou') {
         const richChars = getJudouRichText(c.value || '', 'judou');
@@ -452,7 +443,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
 
     const text = getPlainText(children);
     const totalChars = [...text].length;
-    const maxPerCol = this.nRows - this.currentIndent;
+    const maxPerCol = segMaxPerCol || (this.nRows - this.currentIndent);
 
     // Determine split point
     let mid;
@@ -463,18 +454,9 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       mid = Math.ceil(totalChars / 2);
     }
 
-    let charCount = 0;
-    let splitIdx = children.length;
-    for (let i = 0; i < children.length; i++) {
-      const childText = getPlainText([children[i]]);
-      charCount += [...childText].length;
-      if (charCount >= mid) {
-        splitIdx = i + 1;
-        break;
-      }
-    }
-    const col1HTML = children.slice(0, splitIdx).map(renderChild).join('');
-    const col2HTML = children.slice(splitIdx).map(renderChild).join('');
+    const { before, after } = splitChildrenAtCharCount(children, mid);
+    const col1HTML = before.map(renderChild).join('');
+    const col2HTML = after.map(renderChild).join('');
     return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 

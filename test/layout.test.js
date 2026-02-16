@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parse } from '../src/parser/index.js';
 import { layout, GridLayoutEngine } from '../src/layout/grid-layout.js';
 import { splitJiazhu, splitJiazhuMulti } from '../src/utils/jiazhu.js';
+import { splitChildrenAtCharCount, getPlainText } from '../src/utils/text.js';
 
 function layoutTex(tex) {
   const { ast } = parse(tex);
@@ -410,5 +411,72 @@ describe('jiazhu complex children with taitou', () => {
     expect(jiazhuItems.length).toBe(2);
     // The two segments should be in different columns
     expect(jiazhuItems[1].col).toBeGreaterThan(jiazhuItems[0].col);
+  });
+
+  it('splits long complex jiazhu text into multiple column-sized items', () => {
+    const engine = new GridLayoutEngine(10, 8); // 10 rows per col
+    // 30 chars of text + taitou + 5 chars — first segment needs ceil(30/2)=15 rows,
+    // which exceeds 10 rows, so it should be split into 2 sub-segments
+    const longText = '一二三四五六七八九十壹貳叁肆伍陸柒捌玖拾甲乙丙丁戊己庚辛壬癸';
+    const jiazhuNode = {
+      type: 'jiazhu',
+      options: {},
+      children: [
+        { type: 'text', value: longText },
+        { type: 'taitou', value: '1', children: [] },
+        { type: 'text', value: '後段文字列' },
+      ],
+    };
+    engine.walkNode(jiazhuNode);
+    const items = engine.pages[0].items;
+    const jiazhuItems = items.filter(i => i.jiazhuComplexSegment);
+    // First text segment (30 chars) should be split into 2 sub-segments (20+10 chars)
+    expect(jiazhuItems.length).toBeGreaterThanOrEqual(3);
+    // First two sub-segments should be in consecutive columns
+    expect(jiazhuItems[0].col).toBe(0);
+    expect(jiazhuItems[1].col).toBe(1);
+    // Each sub-segment should have correct maxPerCol
+    expect(jiazhuItems[0].jiazhuComplexMaxPerCol).toBe(10);
+  });
+});
+
+describe('splitChildrenAtCharCount', () => {
+  it('splits a single text node at char boundary', () => {
+    const children = [{ type: 'text', value: 'ABCDE' }];
+    const { before, after } = splitChildrenAtCharCount(children, 3);
+    expect(getPlainText(before)).toBe('ABC');
+    expect(getPlainText(after)).toBe('DE');
+  });
+
+  it('splits between two text nodes', () => {
+    const children = [
+      { type: 'text', value: 'AB' },
+      { type: 'text', value: 'CD' },
+    ];
+    const { before, after } = splitChildrenAtCharCount(children, 2);
+    expect(getPlainText(before)).toBe('AB');
+    expect(getPlainText(after)).toBe('CD');
+  });
+
+  it('splits inside a wrapper node', () => {
+    const children = [
+      { type: 'bookTitle', children: [{ type: 'text', value: '春秋左傳' }] },
+    ];
+    const { before, after } = splitChildrenAtCharCount(children, 2);
+    expect(getPlainText(before)).toBe('春秋');
+    expect(getPlainText(after)).toBe('左傳');
+    expect(before[0].type).toBe('bookTitle');
+    expect(after[0].type).toBe('bookTitle');
+  });
+
+  it('handles mixed text and wrapper nodes', () => {
+    const children = [
+      { type: 'text', value: '前文' },
+      { type: 'bookTitle', children: [{ type: 'text', value: '書名' }] },
+      { type: 'text', value: '後文' },
+    ];
+    const { before, after } = splitChildrenAtCharCount(children, 3);
+    expect(getPlainText(before)).toBe('前文書');
+    expect(getPlainText(after)).toBe('名後文');
   });
 });

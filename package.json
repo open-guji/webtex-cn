@@ -1,6 +1,6 @@
 {
   "name": "webtex-cn",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Convert luatex-cn TeX files to HTML+CSS for vertical Chinese typesetting on the web",
   "type": "module",
   "main": "src/index.js",
@@ -30,7 +30,7 @@
     "format": "prettier --write src/ test/ bin/ build.js",
     "format:check": "prettier --check src/ test/ bin/ build.js",
     "prepublishOnly": "npm run build",
-    "dev": "npx serve -l 3001 ."
+    "dev": "npx serve -p 3001 ."
   },
   "keywords": [
     "tex",
