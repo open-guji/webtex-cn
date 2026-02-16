@@ -672,10 +672,21 @@ export function layout(ast) {
   const engine = new GridLayoutEngine(nRows, nCols);
   engine.punctMode = config.punctMode;
 
+  // Collect front matter (cover, title page) separately — they don't go through the grid
+  const frontMatter = [];
+
   // Only layout 'body' nodes — skip preamble paragraphBreaks etc.
   for (const child of ast.children) {
     if (child.type === 'body') {
-      engine.walkNode(child);
+      for (const bodyChild of child.children) {
+        if (bodyChild.type === NodeType.COVER) {
+          frontMatter.push({ type: 'cover', node: bodyChild });
+        } else if (bodyChild.type === NodeType.TITLE_PAGE) {
+          frontMatter.push({ type: 'titlePage', node: bodyChild });
+        } else {
+          engine.walkNode(bodyChild);
+        }
+      }
     }
   }
 
@@ -687,6 +698,7 @@ export function layout(ast) {
 
   return {
     pages: engine.pages,
+    frontMatter,
     gridConfig: config.grid,
     templateId: config.templateId,
     meta: config.meta,

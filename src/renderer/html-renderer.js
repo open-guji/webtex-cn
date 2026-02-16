@@ -42,6 +42,18 @@ export class HTMLRenderer {
 
     let carryStack = []; // marker stack carried across pages
     const pages = [];
+
+    // Render front matter pages (cover, title page) before grid pages
+    if (layoutResult.frontMatter) {
+      for (const fm of layoutResult.frontMatter) {
+        if (fm.type === 'cover') {
+          pages.push(this.renderCover(fm.node, setupStyles));
+        } else if (fm.type === 'titlePage') {
+          pages.push(this.renderTitlePage(fm.node, setupStyles));
+        }
+      }
+    }
+
     for (const page of layoutResult.pages) {
       const boundary = page.halfBoundary ?? page.items.length;
       const rightItems = page.items.slice(0, boundary);
@@ -226,6 +238,61 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     return segments.map(({ col1, col2 }) =>
       `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
     ).join('');
+  }
+
+  /**
+   * Render a cover page (full-page, no grid).
+   */
+  renderCover(node, setupStyles = '') {
+    const opts = node.options || {};
+    let bgStyle = '';
+    if (opts['底色']) {
+      bgStyle = `background-color: ${this.parseColor(opts['底色'])};`;
+    }
+    const floatsHTML = [];
+    const contentHTML = [];
+    for (const child of node.children) {
+      if (child.type === NodeType.TEXTBOX || child.type === NodeType.FILL_TEXTBOX ||
+          child.type === NodeType.STAMP) {
+        floatsHTML.push(this.renderNode(child));
+      } else if (child.type !== NodeType.NEWLINE && child.type !== NodeType.PARAGRAPH_BREAK) {
+        contentHTML.push(this.renderNode(child));
+      }
+    }
+    return `<div class="wtc-spread wtc-spread-cover"${setupStyles} style="${bgStyle}">
+${floatsHTML.join('\n')}${contentHTML.join('')}
+</div>`;
+  }
+
+  /**
+   * Render a title page (full-page with vertical text lines).
+   */
+  renderTitlePage(node, setupStyles = '') {
+    const linesHTML = [];
+    for (const child of node.children) {
+      if (child.type === NodeType.LINE) {
+        linesHTML.push(this.renderLine(child));
+      }
+    }
+    return `<div class="wtc-spread wtc-spread-title-page"${setupStyles}>
+${linesHTML.join('\n')}
+</div>`;
+  }
+
+  /**
+   * Render a single vertical text line (used in title pages).
+   */
+  renderLine(node) {
+    const opts = node.options || {};
+    let style = '';
+    if (opts.width) style += `width: ${opts.width};`;
+    if (opts['font-size']) style += `font-size: ${opts['font-size']};`;
+    if (opts['grid-height']) style += `--wtc-grid-height: ${opts['grid-height']};`;
+    if (opts.align === 'top') style += 'justify-content: flex-start;';
+    else if (opts.align === 'bottom') style += 'justify-content: flex-end;';
+    else if (opts.align === 'center') style += 'justify-content: center;';
+    const contentHTML = this.renderChildren(node.children);
+    return `<div class="wtc-line"${style ? ` style="${style}"` : ''}>${contentHTML}</div>`;
   }
 
   /**

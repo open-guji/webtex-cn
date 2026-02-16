@@ -466,6 +466,14 @@ export const commandRegistry = {
   },
   '條目': { alias: '条目' },
   'TiaoMu': { alias: '条目' },
+
+  // ---- Title Page Lines ----
+  '行': {
+    args: ['optional', 'required'], node: 'line',
+    category: 'layout',
+    description: 'Vertical text line in title page',
+    status: 'full',
+  },
 };
 
 // =========================================================================
@@ -508,6 +516,23 @@ export const environmentRegistry = {
   },
   'JiaZhuEnv': { alias: '夹注环境' },
   '夾注環境': { alias: '夹注环境' },
+
+  // ---- Special Pages ----
+  '封面': {
+    node: 'cover',
+    hasOptions: true,
+    category: 'structure',
+    description: 'Cover page (full page, no grid)',
+    status: 'full',
+  },
+  '书名页': {
+    node: 'titlePage',
+    hasOptions: false,
+    category: 'structure',
+    description: 'Title page with vertical text lines',
+    status: 'full',
+  },
+  '書名頁': { alias: '书名页' },
 };
 
 // =========================================================================

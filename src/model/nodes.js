@@ -37,6 +37,9 @@ export const NodeType = {
   MULU_ITEM: 'muluItem',
   RELATIVE_TAITOU: 'relativeTaitou',
   NEW_PAGE: 'newPage',
+  COVER: 'cover',
+  TITLE_PAGE: 'titlePage',
+  LINE: 'line',
   UNKNOWN: 'unknown',
 };
 

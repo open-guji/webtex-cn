@@ -198,4 +198,24 @@ describe('Error handling', () => {
     const body = ast.children[0];
     expect(body.children.length).toBeGreaterThan(0);
   });
+
+  it('parses 封面 environment with options', () => {
+    const { ast, warnings } = parse('\\begin{document}\\begin{封面}[底色={245,222,179}]text\\end{封面}\\end{document}');
+    expect(warnings).toHaveLength(0);
+    const body = ast.children[0];
+    const cover = body.children.find(c => c.type === NodeType.COVER);
+    expect(cover).toBeDefined();
+    expect(cover.options['底色']).toBe('{245,222,179}');
+  });
+
+  it('parses 书名页 environment with 行 commands', () => {
+    const { ast, warnings } = parse('\\begin{document}\\begin{书名页}\\行[width=4cm]{欽定四庫全書}\\end{书名页}\\end{document}');
+    expect(warnings).toHaveLength(0);
+    const body = ast.children[0];
+    const titlePage = body.children.find(c => c.type === NodeType.TITLE_PAGE);
+    expect(titlePage).toBeDefined();
+    const line = titlePage.children.find(c => c.type === NodeType.LINE);
+    expect(line).toBeDefined();
+    expect(line.options.width).toBe('4cm');
+  });
 });

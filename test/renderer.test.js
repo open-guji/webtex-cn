@@ -220,4 +220,28 @@ describe('HTMLRenderer', () => {
     expect(html).toContain('first');
     expect(html).toContain('second');
   });
+
+  it('renders cover page with background color', () => {
+    const html = renderTex('\\begin{document}\\begin{封面}[底色={245,222,179}]\\end{封面}\\begin{正文}天地\\end{正文}\\end{document}');
+    expect(html).toContain('wtc-spread-cover');
+    expect(html).toContain('background-color');
+  });
+
+  it('renders title page with lines', () => {
+    const html = renderTex('\\begin{document}\\begin{书名页}\\行[width=4cm, align=top, font-size=36pt]{欽定四庫全書}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+    expect(html).toContain('wtc-spread-title-page');
+    expect(html).toContain('wtc-line');
+    expect(html).toContain('width: 4cm');
+    expect(html).toContain('欽定四庫全書');
+  });
+
+  it('renders cover page before grid pages', () => {
+    const { ast } = parse('\\begin{document}\\begin{封面}[底色={245,222,179}]\\end{封面}\\begin{正文}天地\\end{正文}\\end{document}');
+    const layoutResult = layout(ast);
+    const renderer = new HTMLRenderer(ast);
+    const pages = renderer.renderFromLayout(layoutResult);
+    // First page should be cover, then grid pages
+    expect(pages[0]).toContain('wtc-spread-cover');
+    expect(pages[1]).toContain('wtc-spread-right');
+  });
 });

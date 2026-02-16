@@ -454,6 +454,9 @@ export class Parser {
       'muluItem': NodeType.MULU_ITEM,
       'relativeTaitou': NodeType.RELATIVE_TAITOU,
       'newPage': NodeType.NEW_PAGE,
+      'cover': NodeType.COVER,
+      'titlePage': NodeType.TITLE_PAGE,
+      'line': NodeType.LINE,
     };
     return map[nodeName] || NodeType.UNKNOWN;
   }

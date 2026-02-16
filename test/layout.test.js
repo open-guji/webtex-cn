@@ -480,3 +480,19 @@ describe('splitChildrenAtCharCount', () => {
     expect(getPlainText(after)).toBe('名後文');
   });
 });
+
+describe('frontMatter collection', () => {
+  it('collects cover and title page into frontMatter', () => {
+    const result = layoutTex('\\begin{document}\\begin{封面}[底色={245,222,179}]\\end{封面}\\begin{书名页}\\行[width=4cm]{欽定}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+    expect(result.frontMatter).toHaveLength(2);
+    expect(result.frontMatter[0].type).toBe('cover');
+    expect(result.frontMatter[1].type).toBe('titlePage');
+    // Grid pages should still contain the 正文 content
+    expect(result.pages[0].items.length).toBeGreaterThan(0);
+  });
+
+  it('returns empty frontMatter when no cover/title page', () => {
+    const result = layoutTex('\\begin{document}\\begin{正文}天地\\end{正文}\\end{document}');
+    expect(result.frontMatter).toHaveLength(0);
+  });
+});

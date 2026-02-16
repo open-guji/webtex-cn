@@ -492,6 +492,41 @@
   display: none;
 }
 
+/* ---- Cover (封面) ---- */
+.wtc-spread-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: var(--wtc-page-height);
+  position: relative;
+}
+
+/* ---- Title Page (书名页) ---- */
+.wtc-spread-title-page {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  height: var(--wtc-page-height);
+  padding: var(--wtc-margin-top) var(--wtc-margin-right) var(--wtc-margin-bottom) var(--wtc-margin-left);
+  gap: 8px;
+}
+
+/* ---- Line (行) ---- */
+.wtc-line {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: var(--wtc-font-size);
+  line-height: var(--wtc-line-height);
+  letter-spacing: var(--wtc-letter-spacing);
+  color: var(--wtc-font-color);
+}
+
 /* ---- Stamp (印章) ---- */
 .wtc-stamp {
   position: absolute;
