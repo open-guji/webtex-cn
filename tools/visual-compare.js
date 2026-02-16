@@ -1,0 +1,327 @@
+#!/usr/bin/env node
+/**
+ * Visual comparison tool: webtex-cn (HTML) vs luatex-cn (PDF)
+ *
+ * Converts both outputs to page images and generates a side-by-side HTML report.
+ *
+ * Usage:
+ *   node tools/visual-compare.js --tex examples/sikuanmulu.tex \
+ *     --pdf /path/to/column1.pdf --output /tmp/compare
+ *
+ * Options:
+ *   --tex <path>      TeX source file (required)
+ *   --pdf <path>      Reference PDF file (required)
+ *   --output <dir>    Output directory (default: /tmp/webtex-compare)
+ *   --pages <range>   Page range, e.g. "1-10" (default: all)
+ *   --dpi <number>    PDF render DPI (default: 150)
+ *
+ * Requires: puppeteer (npm install --save-dev puppeteer), pdftoppm (system)
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'fs';
+import { join, dirname, basename, resolve, relative } from 'path';
+import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+import puppeteer from 'puppeteer';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const projectRoot = join(__dirname, '..');
+const srcDir = join(projectRoot, 'src');
+
+// =========================================================================
+// Argument parsing
+// =========================================================================
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const result = { tex: null, pdf: null, output: '/tmp/webtex-compare', pages: null, dpi: 150 };
+
+  for (let i = 0; i < args.length; i++) {
+    switch (args[i]) {
+      case '--tex': result.tex = args[++i]; break;
+      case '--pdf': result.pdf = args[++i]; break;
+      case '--output': case '-o': result.output = args[++i]; break;
+      case '--pages': result.pages = args[++i]; break;
+      case '--dpi': result.dpi = parseInt(args[++i], 10); break;
+      case '--help': case '-h':
+        console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8')
+          .match(/\/\*\*[\s\S]*?\*\//)[0].replace(/^\/\*\*?\s?|\s?\*\/$/gm, '').replace(/^ \* ?/gm, ''));
+        process.exit(0);
+    }
+  }
+
+  if (!result.tex || !result.pdf) {
+    console.error('Error: --tex and --pdf are required. Use --help for usage.');
+    process.exit(1);
+  }
+
+  return result;
+}
+
+function parsePageRange(rangeStr) {
+  if (!rangeStr) return null;
+  const m = rangeStr.match(/^(\d+)(?:-(\d+))?$/);
+  if (!m) { console.error(`Invalid page range: ${rangeStr}`); process.exit(1); }
+  return { first: parseInt(m[1], 10), last: parseInt(m[2] || m[1], 10) };
+}
+
+// =========================================================================
+// Step 1: PDF → images
+// =========================================================================
+
+function convertPdfToImages(pdfPath, outputDir, dpi, pageRange) {
+  const imgDir = join(outputDir, 'pdf-pages');
+  mkdirSync(imgDir, { recursive: true });
+  const prefix = join(imgDir, 'page');
+
+  let cmd = `pdftoppm -png -r ${dpi}`;
+  if (pageRange) cmd += ` -f ${pageRange.first} -l ${pageRange.last}`;
+  cmd += ` "${pdfPath}" "${prefix}"`;
+
+  execSync(cmd, { stdio: 'pipe' });
+
+  return readdirSync(imgDir)
+    .filter(f => f.endsWith('.png'))
+    .sort()
+    .map(f => join(imgDir, f));
+}
+
+// =========================================================================
+// Step 2: TeX → standalone HTML
+// =========================================================================
+
+async function renderTexToHTML(texPath) {
+  const { parse } = await import(join(srcDir, 'parser', 'index.js'));
+  const { layout } = await import(join(srcDir, 'layout', 'grid-layout.js'));
+  const { HTMLRenderer } = await import(join(srcDir, 'renderer', 'html-renderer.js'));
+  const { extractTemplateName } = await import(join(srcDir, 'parser', 'macros.js'));
+
+  const texSource = readFileSync(resolve(texPath), 'utf8');
+
+  // Auto-load .cfg
+  let cfgSource = null;
+  const templateName = extractTemplateName(texSource);
+  if (templateName) {
+    const cfgPath = join(dirname(resolve(texPath)), `${templateName}.cfg`);
+    if (existsSync(cfgPath)) {
+      console.log(`  Loading .cfg: ${cfgPath}`);
+      cfgSource = readFileSync(cfgPath, 'utf8');
+    }
+  }
+
+  const { ast, warnings } = parse(texSource, cfgSource ? { cfgSource } : {});
+  if (warnings.length > 0) {
+    console.log(`  Parse warnings: ${warnings.length}`);
+    warnings.slice(0, 5).forEach(w => console.log(`    - ${w}`));
+    if (warnings.length > 5) console.log(`    ... and ${warnings.length - 5} more`);
+  }
+
+  const layoutResult = layout(ast);
+  const renderer = new HTMLRenderer(ast);
+  const templateId = layoutResult.templateId;
+  const pageHTMLs = renderer.renderFromLayout(layoutResult);
+
+  // Inline CSS
+  const templatesDir = join(srcDir, 'templates');
+  const baseCss = readFileSync(join(templatesDir, 'base.css'), 'utf8');
+  let templateCss = '';
+  const templateCssPath = join(templatesDir, `${templateId}.css`);
+  if (existsSync(templateCssPath)) {
+    templateCss = readFileSync(templateCssPath, 'utf8');
+  }
+
+  const pagesContent = pageHTMLs.map((h, i) =>
+    `<div class="wtc-page" data-page="${i}" data-template="${templateId}">${h}</div>`
+  ).join('\n');
+
+  const html = `<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>${baseCss}\n${templateCss}</style>
+<style>
+body { margin: 0; padding: 0; background: #fff; }
+.wtc-scope { padding: 0; }
+.wtc-page { margin: 0; box-shadow: none; }
+</style>
+</head>
+<body>
+${pagesContent}
+</body>
+</html>`;
+
+  return { html, pageCount: pageHTMLs.length, templateId };
+}
+
+// =========================================================================
+// Step 3: Puppeteer screenshots
+// =========================================================================
+
+async function screenshotHtmlPages(html, outputDir, pageRange) {
+  const imgDir = join(outputDir, 'html-pages');
+  mkdirSync(imgDir, { recursive: true });
+
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-render-hinting=none'],
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1200, height: 2000, deviceScaleFactor: 2 });
+  await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+
+  // Wait for fonts
+  await page.evaluate(() => document.fonts.ready);
+  // Extra settle time for layout
+  await new Promise(r => setTimeout(r, 500));
+
+  const pageElements = await page.$$('.wtc-page');
+  const results = [];
+
+  for (let i = 0; i < pageElements.length; i++) {
+    const pageNum = i + 1;
+    if (pageRange && (pageNum < pageRange.first || pageNum > pageRange.last)) continue;
+
+    const numStr = String(pageNum).padStart(3, '0');
+    const imgPath = join(imgDir, `page-${numStr}.png`);
+
+    await pageElements[i].screenshot({ path: imgPath });
+    results.push(imgPath);
+
+    if (pageNum % 10 === 0) process.stdout.write(`  ${pageNum}/${pageElements.length}\r`);
+  }
+  process.stdout.write('\n');
+
+  await browser.close();
+  return results;
+}
+
+// =========================================================================
+// Step 4: Generate comparison report
+// =========================================================================
+
+function generateReport(pdfImages, htmlImages, outputDir, metadata) {
+  const maxPages = Math.max(pdfImages.length, htmlImages.length);
+
+  const navLinks = Array.from({ length: maxPages }, (_, i) =>
+    `<a href="#page-${i + 1}">${i + 1}</a>`
+  ).join('');
+
+  let rows = '';
+  for (let i = 0; i < maxPages; i++) {
+    const pageNum = i + 1;
+    const pdfSrc = pdfImages[i] ? relative(outputDir, pdfImages[i]) : null;
+    const htmlSrc = htmlImages[i] ? relative(outputDir, htmlImages[i]) : null;
+
+    const pdfCell = pdfSrc
+      ? `<img src="${pdfSrc}" loading="lazy">`
+      : '<div class="missing">PDF page missing</div>';
+    const htmlCell = htmlSrc
+      ? `<img src="${htmlSrc}" loading="lazy">`
+      : '<div class="missing">HTML page missing</div>';
+
+    rows += `
+    <div class="page-row" id="page-${pageNum}">
+      <div class="page-label">Page ${pageNum}</div>
+      <div class="page-pair">
+        <div class="page-col"><div class="col-label">PDF (luatex-cn)</div>${pdfCell}</div>
+        <div class="page-col"><div class="col-label">HTML (webtex-cn)</div>${htmlCell}</div>
+      </div>
+    </div>`;
+  }
+
+  const mismatchNote = pdfImages.length !== htmlImages.length
+    ? `<div class="mismatch">Page count mismatch: PDF ${pdfImages.length} pages, HTML ${htmlImages.length} spreads</div>`
+    : '';
+
+  const reportHtml = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Visual Compare: ${metadata.texFile}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, sans-serif; background: #f0f0f0; padding: 20px; }
+h1 { text-align: center; margin-bottom: 8px; }
+.summary { text-align: center; color: #666; margin-bottom: 20px; font-size: 14px; }
+.mismatch { background: #fff3cd; padding: 10px; text-align: center; border-radius: 4px;
+            max-width: 800px; margin: 0 auto 20px; }
+.nav { position: fixed; top: 10px; right: 10px; background: #fff; padding: 8px;
+       border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+       max-height: 80vh; overflow-y: auto; font-size: 12px; z-index: 100;
+       display: flex; flex-wrap: wrap; gap: 2px; max-width: 200px; }
+.nav a { display: inline-block; padding: 2px 6px; text-decoration: none; color: #333;
+         border-radius: 3px; }
+.nav a:hover { background: #e0e0e0; }
+.page-row { margin: 20px auto; max-width: 1600px; }
+.page-label { font-size: 16px; font-weight: 600; margin-bottom: 8px;
+              padding: 6px 12px; background: #fff; border-radius: 4px; display: inline-block; }
+.page-pair { display: flex; gap: 16px; align-items: flex-start; }
+.page-col { flex: 1; background: #fff; border-radius: 6px; padding: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+.col-label { text-align: center; font-size: 12px; color: #999; margin-bottom: 4px; }
+.page-col img { width: 100%; height: auto; display: block; }
+.missing { padding: 40px; text-align: center; color: #aaa; background: #f8f8f8;
+           border-radius: 4px; }
+</style>
+</head><body>
+<h1>Visual Comparison</h1>
+<div class="summary">
+  TeX: ${metadata.texFile} &middot; Template: ${metadata.templateId}<br>
+  PDF: ${metadata.pdfPages} pages &middot; HTML: ${metadata.htmlPages} spreads
+</div>
+${mismatchNote}
+<div class="nav">${navLinks}</div>
+${rows}
+</body></html>`;
+
+  const reportPath = join(outputDir, 'report.html');
+  writeFileSync(reportPath, reportHtml, 'utf8');
+  return reportPath;
+}
+
+// =========================================================================
+// Main
+// =========================================================================
+
+async function main() {
+  const args = parseArgs();
+  const pageRange = parsePageRange(args.pages);
+
+  if (!existsSync(args.tex)) {
+    console.error(`Error: TeX file not found: ${args.tex}`);
+    process.exit(1);
+  }
+  if (!existsSync(args.pdf)) {
+    console.error(`Error: PDF file not found: ${args.pdf}`);
+    process.exit(1);
+  }
+
+  mkdirSync(args.output, { recursive: true });
+
+  console.log('Step 1/4: Converting PDF to images...');
+  const pdfImages = convertPdfToImages(args.pdf, args.output, args.dpi, pageRange);
+  console.log(`  ${pdfImages.length} PDF page images`);
+
+  console.log('Step 2/4: Rendering TeX to HTML...');
+  const { html, pageCount, templateId } = await renderTexToHTML(args.tex);
+  console.log(`  ${pageCount} HTML spreads (template: ${templateId})`);
+
+  console.log('Step 3/4: Screenshotting HTML pages...');
+  const htmlImages = await screenshotHtmlPages(html, args.output, pageRange);
+  console.log(`  ${htmlImages.length} HTML screenshots`);
+
+  console.log('Step 4/4: Generating report...');
+  const reportPath = generateReport(pdfImages, htmlImages, args.output, {
+    texFile: basename(args.tex),
+    pdfPages: pdfImages.length,
+    htmlPages: htmlImages.length,
+    templateId,
+  });
+
+  console.log(`\nDone! Report: ${reportPath}`);
+  console.log(`Open: file://${resolve(reportPath)}`);
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

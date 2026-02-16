@@ -2,6 +2,8 @@
 .claude/
 CLAUDE.md
 
+output/
+
 
 node_modules/
 dist/
