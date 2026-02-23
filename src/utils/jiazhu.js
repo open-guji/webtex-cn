@@ -14,7 +14,11 @@ export function splitJiazhu(richChars, align = 'outward', balance = true, maxPer
 
   let mid;
   if (!balance && maxPerCol > 0) {
-    // Unbalanced: col1 fills to maxPerCol, remainder in col2
+    // Unbalanced: col1 fills up to maxPerCol, remainder in col2
+    // Each row has 2 chars, so maxPerCol rows means 2*maxPerCol chars.
+    // However, richChars is already a list of characters/punctuations.
+    // Traditional jiazhu is dual-line, so the first line typically takes half or full?
+    // In "left-aligned" mode, we fill the first column of the jiazhu (which is col1).
     mid = Math.min(richChars.length, maxPerCol);
   } else {
     mid = align === 'inward'

@@ -90,6 +90,11 @@ export class GridLayoutEngine {
     // Track the last occupied grid cell for punctuation attachment
     this.lastCellPos = { col: 0, row: 0 };
 
+    // Track the column where the current paragraph started (for first-col-only indent)
+    this.paragraphStartCol = -1;
+    // First-column indent (may differ from currentIndent via first-indent option)
+    this.currentFirstIndent = 0;
+
     // Pages
     this.pages = [newPage()];
   }
@@ -98,8 +103,26 @@ export class GridLayoutEngine {
     return this.pages[this.pages.length - 1];
   }
 
+  /**
+   * The total number of rows in a column (upper bound for currentRow).
+   * Inside a paragraph: currentRow starts at the indent value, so effectiveRows = nRows.
+   * Outside a paragraph (e.g. after SET_INDENT): old behavior, effectiveRows = nRows - indent.
+   */
   get effectiveRows() {
-    return this.nRows - (this.ignoreIndent ? 0 : this.currentIndent);
+    if (this.ignoreIndent) return this.nRows;
+    // Inside paragraph: currentRow already incorporates indent offset
+    if (this.paragraphStartCol >= 0) return this.nRows;
+    // Outside paragraph (SET_INDENT): currentRow starts at 0, reduce effective rows
+    return this.nRows - this.currentIndent;
+  }
+
+  /**
+   * Content rows available per full column (nRows minus indent).
+   * Used by jiazhu to compute segment sizes.
+   */
+  get contentRows() {
+    if (this.ignoreIndent) return this.nRows;
+    return this.nRows - this.currentIndent;
   }
 
   /**
@@ -116,8 +139,9 @@ export class GridLayoutEngine {
    */
   advanceColumn() {
     this.currentCol++;
-    this.currentRow = 0;
-    this.ignoreIndent = false; // Reset ignoreIndent when moving to a new column
+    this.ignoreIndent = false;
+    // Inside a paragraph: start at the indent offset so currentRow reflects visual position
+    this.currentRow = (this.paragraphStartCol >= 0) ? this.currentIndent : 0;
     this.checkHalfBoundary();
     if (this.currentCol >= this.colsPerSpread) {
       this.newPageBreak();
@@ -133,7 +157,8 @@ export class GridLayoutEngine {
     }
     this.pages.push(newPage());
     this.currentCol = 0;
-    this.currentRow = 0;
+    // Inside a paragraph: start at the indent offset so currentRow reflects visual position
+    this.currentRow = (this.paragraphStartCol >= 0) ? this.currentIndent : 0;
   }
 
   /**
@@ -184,9 +209,10 @@ export class GridLayoutEngine {
 
       this.currentRow++;
       if (this.currentRow >= this.effectiveRows) {
-        this.currentRow = 0;
         this.currentCol++;
         this.ignoreIndent = false;
+        // Inside a paragraph: start at the indent offset so currentRow reflects visual position
+        this.currentRow = (this.paragraphStartCol >= 0) ? this.currentIndent : 0;
         this.checkHalfBoundary();
         if (this.currentCol >= this.colsPerSpread) {
           this.newPageBreak();
@@ -277,7 +303,12 @@ export class GridLayoutEngine {
       }
 
       case NodeType.NEW_PAGE: {
-        if (this.currentCol > 0 || this.currentRow > 0) {
+        // Force new page if we are not already at the very start of a page.
+        // currentCol > 0 or currentRow > currentIndent (if in paragraph)
+        const inParagraph = this.paragraphStartCol >= 0;
+        const isFreshPage = this.currentCol === 0 && (inParagraph ? this.currentRow === this.currentIndent : this.currentRow === 0);
+
+        if (!isFreshPage) {
           this.newPageBreak();
         }
         break;
@@ -350,6 +381,22 @@ export class GridLayoutEngine {
         break;
       }
 
+      case NodeType.BANXIN:
+        this.walkBanxin(node);
+        break;
+
+      case NodeType.DIGITAL_CONTENT:
+        this.walkDigitalContent(node);
+        break;
+
+      case NodeType.BANXIN_UPPER:
+      case NodeType.BANXIN_CHAPTER:
+      case NodeType.BANXIN_PAGE:
+      case NodeType.BANXIN_LOWER:
+      case NodeType.YUWEI:
+        // These belong inside walkBanxin; ignore if appearing naked
+        break;
+
       default:
         if (node.children && node.children.length > 0) {
           this.walkChildren(node.children);
@@ -378,21 +425,45 @@ export class GridLayoutEngine {
    */
   walkParagraph(node) {
     const indent = parseInt(node.options?.indent || '0', 10);
+    const firstIndentStr = node.options?.['first-indent'];
+    const firstIndent = firstIndentStr !== undefined ? parseInt(firstIndentStr, 10) : indent;
+
     const prevIndent = this.currentIndent;
+    const prevFirstIndent = this.currentFirstIndent;
+    const prevParagraphStartCol = this.paragraphStartCol;
     this.currentIndent = indent;
+    this.currentFirstIndent = firstIndent;
 
     // If current position is past the effective area for this indent,
     // advance to a fresh column before starting the paragraph.
-    if (this.currentRow >= this.nRows - indent && this.currentRow > 0) {
+    if (this.currentRow >= this.nRows - firstIndent && this.currentRow > 0) {
       this.advanceColumn();
     }
 
-    this.placeMarker(LayoutMarker.PARAGRAPH_START, { paragraphNode: node });
+    // Record paragraph start column
+    this.paragraphStartCol = this.currentCol;
+
+    // Set currentRow to firstIndent if starting at the beginning of a column,
+    // so currentRow reflects the visual position (indent offset).
+    if (this.currentRow === 0 && firstIndent > 0) {
+      this.currentRow = firstIndent;
+    }
+
+    this.placeMarker(LayoutMarker.PARAGRAPH_START, { paragraphNode: node, paragraphStartCol: this.currentCol });
     this.walkChildren(node.children);
     this.placeMarker(LayoutMarker.PARAGRAPH_END);
 
+    // Force column break at paragraph end if column has content (matching luatex-cn behavior)
+    const hasContentInCol = this.currentRow > this.currentIndent;
+
     this.currentIndent = prevIndent;
+    this.currentFirstIndent = prevFirstIndent;
+    this.paragraphStartCol = prevParagraphStartCol;
     this.afterParagraph = true;
+
+    if (hasContentInCol) {
+      this.advanceColumn();
+    }
   }
 
   /**
@@ -445,8 +516,15 @@ export class GridLayoutEngine {
 
     if (this.punctMode !== 'judou') {
       const chars = [...text];
-      this.placeItem(node);
-      this.advanceRows(chars.length);
+      // Split text into column-sized chunks so renderer gets one item per column
+      let remaining = chars;
+      while (remaining.length > 0) {
+        const available = this.effectiveRows - this.currentRow;
+        const chunk = remaining.slice(0, available);
+        this.placeItem({ type: NodeType.TEXT, value: chunk.join('') });
+        this.advanceRows(chunk.length);
+        remaining = remaining.slice(chunk.length);
+      }
       return;
     }
 
@@ -457,8 +535,14 @@ export class GridLayoutEngine {
 
     const flushBuf = () => {
       if (buf.length > 0) {
-        this.placeItem({ type: NodeType.TEXT, value: buf });
-        this.advanceRows([...buf].length);
+        let remaining = [...buf];
+        while (remaining.length > 0) {
+          const available = this.effectiveRows - this.currentRow;
+          const chunk = remaining.slice(0, available);
+          this.placeItem({ type: NodeType.TEXT, value: chunk.join('') });
+          this.advanceRows(chunk.length);
+          remaining = remaining.slice(chunk.length);
+        }
         buf = '';
       }
     };
@@ -523,9 +607,9 @@ export class GridLayoutEngine {
     const hasComplexChildren = node.children.some(c => c.type !== NodeType.TEXT);
     const autoBalance = (node.options?.['auto-balance'] ?? node.options?.['自动均衡']) !== 'false';
     const align = node.options?.align || 'outward';
-    const maxPerCol = this.effectiveRows;
+    const maxPerCol = this.contentRows;
 
-    const remaining = maxPerCol - this.currentRow;
+    const remaining = this.nRows - this.currentRow;
     const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
 
     if (hasComplexChildren) {
@@ -615,8 +699,8 @@ export class GridLayoutEngine {
         const charLen = [...text].length;
         if (charLen === 0) continue;
 
-        const maxPerCol = this.effectiveRows;
-        const remaining = maxPerCol - this.currentRow;
+        const maxPerCol = this.contentRows;
+        const remaining = this.nRows - this.currentRow;
         const firstMax = remaining > 0 && remaining < maxPerCol ? remaining : maxPerCol;
         const firstMaxChars = firstMax * 2;
         const fullMaxChars = maxPerCol * 2;
@@ -654,6 +738,48 @@ export class GridLayoutEngine {
       }
     }
   }
+
+  walkBanxin(node) {
+    // Banxin environment: collect its parts and update current page/global meta
+    const parts = {
+      upper: '',
+      chapter: '',
+      page: '',
+      lower: '',
+      upperYuwei: false,
+      lowerYuwei: false,
+    };
+
+    for (const child of node.children) {
+      const type = child.type;
+      const text = getPlainText(child.children || []);
+      if (type === NodeType.BANXIN_UPPER) parts.upper = text;
+      else if (type === NodeType.BANXIN_CHAPTER) parts.chapter = text;
+      else if (type === NodeType.BANXIN_PAGE) parts.page = text;
+      else if (type === NodeType.BANXIN_LOWER) parts.lower = text;
+      else if (type === NodeType.YUWEI) {
+        const yuweiType = child.value || child.options?.value || 'lower';
+        if (yuweiType === 'upper') parts.upperYuwei = true;
+        else parts.lowerYuwei = true;
+      }
+    }
+
+    // Attach to current page if possible, otherwise global meta
+    if (this.currentPage) {
+      this.currentPage.meta = { ...this.currentPage.meta, banxin: parts };
+    }
+  }
+
+  walkDigitalContent(node) {
+    // Obeylines: treat each NEWLINE / COLUMN_BREAK / PARAGRAPH_BREAK as a column advance
+    for (const child of node.children) {
+      if (child.type === NodeType.NEWLINE || child.type === NodeType.COLUMN_BREAK || child.type === NodeType.PARAGRAPH_BREAK) {
+        this.advanceColumn();
+      } else {
+        this.walkNode(child);
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -675,18 +801,17 @@ export function layout(ast) {
   // Collect front matter (cover, title page) separately — they don't go through the grid
   const frontMatter = [];
 
-  // Only layout 'body' nodes — skip preamble paragraphBreaks etc.
-  for (const child of ast.children) {
-    if (child.type === 'body') {
-      for (const bodyChild of child.children) {
-        if (bodyChild.type === NodeType.COVER) {
-          frontMatter.push({ type: 'cover', node: bodyChild });
-        } else if (bodyChild.type === NodeType.TITLE_PAGE) {
-          frontMatter.push({ type: 'titlePage', node: bodyChild });
-        } else {
-          engine.walkNode(bodyChild);
-        }
-      }
+  // Determine content to layout: if there's a 'body' node, use its children; otherwise use top-level children.
+  const bodyNode = ast.children.find(c => c.type === 'body');
+  const itemsToWalk = bodyNode ? bodyNode.children : ast.children;
+
+  for (const child of itemsToWalk) {
+    if (child.type === NodeType.COVER) {
+      frontMatter.push({ type: 'cover', node: child });
+    } else if (child.type === NodeType.TITLE_PAGE) {
+      frontMatter.push({ type: 'titlePage', node: child });
+    } else {
+      engine.walkNode(child);
     }
   }
 

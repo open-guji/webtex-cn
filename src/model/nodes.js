@@ -40,6 +40,13 @@ export const NodeType = {
   COVER: 'cover',
   TITLE_PAGE: 'titlePage',
   LINE: 'line',
+  BANXIN: 'banxin',
+  BANXIN_UPPER: 'banxinUpper',
+  BANXIN_CHAPTER: 'banxinChapter',
+  BANXIN_PAGE: 'banxinPage',
+  BANXIN_LOWER: 'banxinLower',
+  YUWEI: 'yuwei',
+  DIGITAL_CONTENT: 'digitalContent',
   UNKNOWN: 'unknown',
 };
 

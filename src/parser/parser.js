@@ -457,6 +457,13 @@ export class Parser {
       'cover': NodeType.COVER,
       'titlePage': NodeType.TITLE_PAGE,
       'line': NodeType.LINE,
+      'banxin': NodeType.BANXIN,
+      'banxinUpper': NodeType.BANXIN_UPPER,
+      'banxinChapter': NodeType.BANXIN_CHAPTER,
+      'banxinPage': NodeType.BANXIN_PAGE,
+      'banxinLower': NodeType.BANXIN_LOWER,
+      'yuwei': NodeType.YUWEI,
+      'digitalContent': NodeType.DIGITAL_CONTENT,
     };
     return map[nodeName] || NodeType.UNKNOWN;
   }

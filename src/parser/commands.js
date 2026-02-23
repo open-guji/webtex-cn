@@ -223,6 +223,12 @@ export const commandRegistry = {
   },
   'SetIndent': { alias: '设置缩进' },
   '設置縮進': { alias: '设置缩进' },
+  '缩进': {
+    args: ['optional'], node: 'setIndent',
+    category: 'layout',
+    description: 'Force current-line indent value (shortcut)',
+    status: 'full',
+  },
   '换行': {
     args: [], node: 'columnBreak',
     category: 'layout',
@@ -235,6 +241,60 @@ export const commandRegistry = {
     args: [], node: 'newPage',
     category: 'layout',
     description: 'Force page break',
+    status: 'full',
+  },
+  '换页': { alias: 'newpage' },
+  '換頁': { alias: 'newpage' },
+
+  // ---- Digital Specific Layout ----
+  '双列': { alias: '夹注' },
+  '雙列': { alias: '夹注' },
+  '右小列': {
+    args: ['optional', 'required'], node: 'text', // treating as text wrapper for now
+    category: 'layout',
+    description: 'Right column content (jiazhu internal, legacy)',
+    status: 'partial',
+  },
+  '左小列': {
+    args: ['optional', 'required'], node: 'text',
+    category: 'layout',
+    description: 'Left column content (jiazhu internal, legacy)',
+    status: 'partial',
+  },
+  'BanxinUpper': {
+    args: ['required'], node: 'banxinUpper',
+    category: 'structure',
+    description: 'Banxin upper part content',
+    status: 'full',
+  },
+  'BanxinChapter': {
+    args: ['required'], node: 'banxinChapter',
+    category: 'structure',
+    description: 'Banxin chapter part content',
+    status: 'full',
+  },
+  'BanxinPageNumber': {
+    args: ['required'], node: 'banxinPage',
+    category: 'structure',
+    description: 'Banxin page number content',
+    status: 'full',
+  },
+  'BanxinLower': {
+    args: ['required'], node: 'banxinLower',
+    category: 'structure',
+    description: 'Banxin lower part content',
+    status: 'full',
+  },
+  'UpperYuwei': {
+    args: [], node: 'yuwei', defaultOpt: 'upper',
+    category: 'structure',
+    description: 'Upper fish tail mark',
+    status: 'full',
+  },
+  'LowerYuwei': {
+    args: [], node: 'yuwei', defaultOpt: 'lower',
+    category: 'structure',
+    description: 'Lower fish tail mark',
     status: 'full',
   },
 
@@ -533,6 +593,18 @@ export const environmentRegistry = {
     status: 'full',
   },
   '書名頁': { alias: '书名页' },
+  'Banxin': {
+    node: 'banxin',
+    category: 'structure',
+    description: 'Explicit banxin content',
+    status: 'full',
+  },
+  'DigitalContent': {
+    node: 'digitalContent',
+    category: 'structure',
+    description: 'Digital layout content (obeylines)',
+    status: 'full',
+  },
 };
 
 // =========================================================================

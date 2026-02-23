@@ -38,7 +38,7 @@ export class HTMLRenderer {
     const config = layoutResult.config;
     this.punctMode = config.punctMode || this.punctMode;
     const setupStyles = cssOverridesToStyleAttr(config.cssOverrides);
-    const banxin = this.renderBanxinFromMeta(config.meta);
+    const defaultBanxin = this.renderBanxinFromMeta(config.meta);
 
     let carryStack = []; // marker stack carried across pages
     const pages = [];
@@ -66,6 +66,8 @@ export class HTMLRenderer {
       const rightHTML = right.html;
       const leftHTML = left.html;
       const floatsHTML = page.floats.map(f => this.renderNode(f)).join('\n');
+
+      const banxin = page.meta?.banxin ? this.renderBanxinFromMeta(page.meta) : defaultBanxin;
 
       // Right half-page: content on right, banxin on left
       pages.push(`<div class="wtc-spread wtc-spread-right"${setupStyles}>
@@ -139,14 +141,9 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     let html = '';
 
     // Re-open tags from inherited stack
-    // Also recover paragraph indent state from inherited stack
-    let paragraphIndent = 0;
     let lastCol = -1;
     for (const entry of markerStack) {
       html += this.markerOpenTag(entry);
-      if (entry.node.type === LayoutMarker.PARAGRAPH_START) {
-        paragraphIndent = parseInt(entry.paragraphNode?.options?.indent || '0', 10);
-      }
     }
     const stack = [...markerStack];
 
@@ -162,14 +159,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       if (this.isOpenMarker(type)) {
         html += this.markerOpenTag(item);
         stack.push(item);
-        if (type === LayoutMarker.PARAGRAPH_START) {
-          paragraphIndent = parseInt(item.paragraphNode?.options?.indent || '0', 10);
-          lastCol = -1;
-        }
       } else if (this.matchingOpenMarker(type)) {
-        if (type === LayoutMarker.PARAGRAPH_END) {
-          paragraphIndent = 0;
-        }
         html += this.markerCloseTag(this.matchingOpenMarker(type));
         // Pop matching open marker from stack
         for (let i = stack.length - 1; i >= 0; i--) {
@@ -179,9 +169,11 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
           }
         }
       } else {
-        // Emit indent spacer at the start of each column within an indented paragraph
-        if (paragraphIndent > 0 && item.col !== lastCol) {
-          html += `<span class="wtc-indent-spacer" style="--wtc-indent-size: calc(${paragraphIndent} * var(--wtc-grid-height))"></span>`;
+        // Emit indent spacer at the start of each column based on item.row from layout
+        if (item.col !== lastCol) {
+          if (item.row > 0) {
+            html += `<span class="wtc-indent-spacer" style="--wtc-indent-size: calc(${item.row} * var(--wtc-grid-height))"></span>`;
+          }
           lastCol = item.col;
         }
         html += this.renderLayoutItem(item);
@@ -253,7 +245,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     const contentHTML = [];
     for (const child of node.children) {
       if (child.type === NodeType.TEXTBOX || child.type === NodeType.FILL_TEXTBOX ||
-          child.type === NodeType.STAMP) {
+        child.type === NodeType.STAMP) {
         floatsHTML.push(this.renderNode(child));
       } else if (child.type !== NodeType.NEWLINE && child.type !== NodeType.PARAGRAPH_BREAK) {
         contentHTML.push(this.renderNode(child));
@@ -299,6 +291,30 @@ ${linesHTML.join('\n')}
    * Render banxin from layout metadata.
    */
   renderBanxinFromMeta(meta) {
+    if (meta.banxin) {
+      const b = meta.banxin;
+      const upperYuwei = b.upperYuwei ? '<div class="wtc-yuwei wtc-yuwei-upper"></div>' : '';
+      const lowerYuwei = b.lowerYuwei ? '<div class="wtc-yuwei wtc-yuwei-lower"></div>' : '';
+      const chapterHTML = (b.chapter || '').split(/\\\\|\n/).map(s => s.trim()).filter(Boolean)
+        .map(p => `<span class="wtc-banxin-chapter-part">${escapeHTML(p)}</span>`).join('');
+      const pageHTML = b.page ? `<span class="wtc-banxin-page-num">${escapeHTML(b.page)}</span>` : '';
+
+      return `<div class="wtc-banxin">
+  <div class="wtc-banxin-section wtc-banxin-upper">
+    <span class="wtc-banxin-book-name">${escapeHTML(b.upper || '')}</span>
+    ${upperYuwei}
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-middle">
+    <div class="wtc-banxin-chapter">${chapterHTML}</div>
+  </div>
+  <div class="wtc-banxin-section wtc-banxin-lower">
+    ${pageHTML}
+    ${lowerYuwei}
+    ${b.lower ? `<span class="wtc-banxin-lower-text">${escapeHTML(b.lower)}</span>` : ''}
+  </div>
+</div>`;
+    }
+
     if (!meta.title && !meta.chapter) return '';
     const title = escapeHTML(meta.title || '');
     // Chapter may contain \\ for line breaks → split into separate spans
