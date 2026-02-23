@@ -21,7 +21,11 @@ export function parse(source, options = {}) {
   if (options.cfgSource) {
     source = preprocessWithCfg(source, options.cfgSource);
   }
-  const tokenizer = new Tokenizer(source);
+
+  // Pre-scan for documentclass to detect digital mode
+  const isDigitalMode = /\\documentclass\s*(?:\[[^\]]*\])?\s*\{\s*ltc-guji-digital\s*\}/.test(source);
+
+  const tokenizer = new Tokenizer(source, { isDigitalMode });
   const tokens = tokenizer.tokenize();
   const parser = new Parser(tokens);
   const ast = parser.parse();

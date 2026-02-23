@@ -208,7 +208,8 @@ export class GridLayoutEngine {
       this.lastCellPos = { col: this.currentCol, row: this.currentRow };
 
       this.currentRow++;
-      if (this.currentRow >= this.effectiveRows) {
+      // Digital mode: do NOT auto-advance column (only explicit \换行 or newline)
+      if (!this.isDigitalMode && this.currentRow >= this.effectiveRows) {
         this.currentCol++;
         this.ignoreIndent = false;
         // Inside a paragraph: start at the indent offset so currentRow reflects visual position
@@ -255,6 +256,11 @@ export class GridLayoutEngine {
         // When currentRow === 0 (e.g. after a block element like MULU_ITEM,
         // or after natural column wrap), the column is already fresh.
         if (this.currentRow > 0) {
+          // In digital mode, if currentRow exceeds bounds (text overflow),
+          // reset to 0 before placing marker to avoid out-of-bounds items
+          if (this.isDigitalMode && this.currentRow >= this.effectiveRows) {
+            this.currentRow = 0;
+          }
           this.placeMarker(LayoutMarker.COLUMN_BREAK);
           this.advanceColumn();
         }
@@ -377,6 +383,10 @@ export class GridLayoutEngine {
       case NodeType.SET_INDENT: {
         const indentVal = parseInt(node.value, 10) || 0;
         this.currentIndent = indentVal;
+        // In digital mode, \缩进[N] sets currentRow to N (start from row N)
+        if (this.isDigitalMode) {
+          this.currentRow = indentVal;
+        }
         this.placeItem(node);
         break;
       }
@@ -523,7 +533,16 @@ export class GridLayoutEngine {
 
     if (this.punctMode !== 'judou') {
       const chars = [...text];
-      // Split text into column-sized chunks so renderer gets one item per column
+
+      // Digital mode: place text as-is without auto-splitting
+      // (column breaks only happen via explicit \换行 or newlines)
+      if (this.isDigitalMode) {
+        this.placeItem({ type: NodeType.TEXT, value: text });
+        this.advanceRows(chars.length);
+        return;
+      }
+
+      // Semantic mode: split text into column-sized chunks so renderer gets one item per column
       let remaining = chars;
       while (remaining.length > 0) {
         const available = this.effectiveRows - this.currentRow;
@@ -804,9 +823,13 @@ export function layout(ast) {
   const { nRows, nCols } = config.grid;
   const engine = new GridLayoutEngine(nRows, nCols);
   engine.punctMode = config.punctMode;
+  // Digital mode: disable auto column break (only explicit \换行 or newline in source)
+  engine.isDigitalMode = ast.documentClass?.includes('digital') || false;
 
-  // Collect front matter (cover, title page) separately — they don't go through the grid
+  // Collect front matter and back matter (cover, title page, blank pages) separately
   const frontMatter = [];
+  const backMatter = [];
+  let hasSeenContent = false; // Track if we've encountered main content
 
   // Determine content to layout: if there's a 'body' node, use its children; otherwise use top-level children.
   const bodyNode = ast.children.find(c => c.type === 'body');
@@ -814,12 +837,31 @@ export function layout(ast) {
 
   for (const child of itemsToWalk) {
     if (child.type === NodeType.COVER) {
-      frontMatter.push({ type: 'cover', node: child });
+      const item = { type: 'cover', node: child };
+      if (hasSeenContent) {
+        backMatter.push(item);
+      } else {
+        frontMatter.push(item);
+      }
     } else if (child.type === NodeType.TITLE_PAGE) {
-      frontMatter.push({ type: 'titlePage', node: child });
+      const item = { type: 'titlePage', node: child };
+      if (hasSeenContent) {
+        backMatter.push(item);
+      } else {
+        frontMatter.push(item);
+      }
     } else if (child.type === NodeType.BLANK_PAGE) {
-      frontMatter.push({ type: 'blankPage', node: child });
+      const item = { type: 'blankPage', node: child };
+      if (hasSeenContent) {
+        backMatter.push(item);
+      } else {
+        frontMatter.push(item);
+      }
     } else {
+      // Mark that we've seen main content (contentBlock = \begin{正文})
+      if (child.type === NodeType.CONTENT_BLOCK || child.type === 'chapter') {
+        hasSeenContent = true;
+      }
       engine.walkNode(child);
     }
   }
@@ -833,9 +875,11 @@ export function layout(ast) {
   return {
     pages: engine.pages,
     frontMatter,
+    backMatter,
     gridConfig: config.grid,
     templateId: config.templateId,
     meta: config.meta,
     config,
+    isDigitalMode: engine.isDigitalMode,
   };
 }

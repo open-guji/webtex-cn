@@ -150,7 +150,19 @@
   border: var(--wtc-border-thickness) solid var(--wtc-border-color);
   padding: var(--wtc-border-padding-top) 0 var(--wtc-border-padding-bottom) 0;
   height: 100%;
+  /* In vertical-rl, width is the column height. Set to exact grid height to prevent auto-wrapping */
+  width: calc(var(--wtc-n-rows) * var(--wtc-grid-height));
   min-width: 100%;
+}
+
+/* Digital mode: remove width constraint and overflow:hidden so text never auto-wraps.
+   In digital mode, column breaks are always explicit (\换行 or newlines in source).
+   If a column has too many chars, they should extend beyond the page boundary
+   rather than wrapping to the next column (helps authors spot missing newlines). */
+.wtc-spread[data-digital-mode="true"] .wtc-content-border>.wtc-content {
+  width: auto;
+  min-width: auto;
+  overflow: visible;
 }
 
 /* ---- Content Area (竖排) ---- */

@@ -39,6 +39,7 @@ export class HTMLRenderer {
     this.punctMode = config.punctMode || this.punctMode;
     const setupStyles = cssOverridesToStyleAttr(config.cssOverrides);
     const defaultBanxin = this.renderBanxinFromMeta(config.meta);
+    const digitalModeAttr = layoutResult.isDigitalMode ? ' data-digital-mode="true"' : '';
 
     let carryStack = []; // marker stack carried across pages
     const pages = [];
@@ -72,15 +73,29 @@ export class HTMLRenderer {
       const banxin = page.meta?.banxin ? this.renderBanxinFromMeta(page.meta) : defaultBanxin;
 
       // Right half-page: content on right, banxin on left
-      pages.push(`<div class="wtc-spread wtc-spread-right"${setupStyles}>
+      pages.push(`<div class="wtc-spread wtc-spread-right"${setupStyles}${digitalModeAttr}>
 ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">${rightHTML}</div></div></div>${banxin}
 </div>`);
 
       // Left half-page: content on left, banxin on right
-      pages.push(`<div class="wtc-spread wtc-spread-left"${setupStyles}>
+      pages.push(`<div class="wtc-spread wtc-spread-left"${setupStyles}${digitalModeAttr}>
 <div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content">${leftHTML}</div></div></div>${banxin}
 </div>`);
     }
+
+    // Render back matter pages (cover, blank pages) after main content
+    if (layoutResult.backMatter) {
+      for (const bm of layoutResult.backMatter) {
+        if (bm.type === 'cover') {
+          pages.push(this.renderCover(bm.node, setupStyles));
+        } else if (bm.type === 'titlePage') {
+          pages.push(this.renderTitlePage(bm.node, setupStyles));
+        } else if (bm.type === 'blankPage') {
+          pages.push(this.renderBlankPage(bm.node, setupStyles));
+        }
+      }
+    }
+
     return pages;
   }
 

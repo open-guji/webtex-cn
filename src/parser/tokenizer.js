@@ -39,10 +39,11 @@ function isCommandChar(ch) {
 }
 
 export class Tokenizer {
-  constructor(source) {
+  constructor(source, options = {}) {
     this.source = source;
     this.pos = 0;
     this.tokens = [];
+    this.isDigitalMode = options.isDigitalMode || false; // ltc-guji-digital mode
   }
 
   peek() {
@@ -213,15 +214,38 @@ export class Tokenizer {
       text += this.advance();
     }
     if (text) {
-      // Split on blank lines (paragraph breaks): \n followed by whitespace-only line
-      const parts = text.split(/\n[ \t]*\n/);
-      for (let i = 0; i < parts.length; i++) {
-        if (i > 0) {
-          this.tokens.push({ type: TokenType.PARAGRAPH_BREAK, value: '' });
+      if (this.isDigitalMode) {
+        // Digital mode: preserve single newlines as column breaks in \begin{正文}
+        const parts = text.split(/\n[ \t]*\n/); // Split on blank lines (paragraph breaks)
+        for (let i = 0; i < parts.length; i++) {
+          if (i > 0) {
+            this.tokens.push({ type: TokenType.PARAGRAPH_BREAK, value: '' });
+          }
+          // In digital mode, split on single \n and emit NEWLINE token
+          const lines = parts[i].split('\n');
+          for (let j = 0; j < lines.length; j++) {
+            if (j > 0) {
+              // Single newline in digital mode = column break
+              this.tokens.push({ type: TokenType.NEWLINE, value: '' });
+            }
+            // Trim whitespace but preserve the text
+            const line = lines[j].replace(/^[ \t]+|[ \t]+$/g, '');
+            if (line) {
+              this.tokens.push({ type: TokenType.TEXT, value: line });
+            }
+          }
         }
-        const collapsed = parts[i].replace(/[ \t]*\n[ \t]*/g, '').replace(/[ \t]+/g, ' ');
-        if (collapsed.trim() || collapsed === ' ') {
-          this.tokens.push({ type: TokenType.TEXT, value: collapsed });
+      } else {
+        // Semantic mode: collapse newlines (original behavior)
+        const parts = text.split(/\n[ \t]*\n/);
+        for (let i = 0; i < parts.length; i++) {
+          if (i > 0) {
+            this.tokens.push({ type: TokenType.PARAGRAPH_BREAK, value: '' });
+          }
+          const collapsed = parts[i].replace(/[ \t]*\n[ \t]*/g, '').replace(/[ \t]+/g, ' ');
+          if (collapsed.trim() || collapsed === ' ') {
+            this.tokens.push({ type: TokenType.TEXT, value: collapsed });
+          }
         }
       }
     }
