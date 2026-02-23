@@ -58,8 +58,11 @@ export class Parser {
       } else if (token.type === TokenType.EOF) {
         break;
       } else {
-        if (token.type === TokenType.COMMAND) content += '\\';
-        content += token.value;
+        if (token.type === TokenType.COMMAND) {
+          content += '\\' + token.value + ' ';
+        } else {
+          content += token.value;
+        }
         this.advance();
       }
     }
@@ -252,6 +255,10 @@ export class Parser {
     if (name === 'item') {
       // \item in a list — return marker node, content follows
       return createNode(NodeType.LIST_ITEM);
+    }
+
+    if (name === '臣') {
+      return createNode(NodeType.TEXT, { value: '臣' });
     }
 
     // No definition found: treat as unknown

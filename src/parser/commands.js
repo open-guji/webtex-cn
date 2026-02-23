@@ -331,7 +331,6 @@ export const commandRegistry = {
     status: 'full',
   },
   '單抬': { alias: '单抬' },
-  '臣': { alias: '单抬' },
   '双抬': {
     args: [], node: 'taitou', defaultOpt: '2',
     category: 'layout',
