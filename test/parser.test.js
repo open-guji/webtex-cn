@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse, NodeType } from '../src/parser/index.js';
+import { parseKeyValue } from '../src/model/nodes.js';
 
 describe('Parser', () => {
   it('parses documentclass with template', () => {
@@ -127,7 +128,7 @@ describe('Parser', () => {
 \\end{正文}
 \\end{document}
 `;
-    const { ast, warnings } = parse(tex);
+    const { ast } = parse(tex);
     expect(ast.template).toBe('四库全书');
     expect(ast.title).toBe('钦定四库全书');
     expect(ast.chapter).toBe('史记卷一');
@@ -154,21 +155,18 @@ describe('Parser', () => {
 
 describe('parseKeyValue', () => {
   it('parses simple key=value pairs', () => {
-    const { parseKeyValue } = require('../src/model/nodes.js');
     const result = parseKeyValue('indent=2, first-indent=0');
     expect(result.indent).toBe('2');
     expect(result['first-indent']).toBe('0');
   });
 
   it('handles nested braces', () => {
-    const { parseKeyValue } = require('../src/model/nodes.js');
     const result = parseKeyValue('color={180, 95, 75}, size=12pt');
     expect(result.color).toBe('{180, 95, 75}');
     expect(result.size).toBe('12pt');
   });
 
   it('handles boolean flags', () => {
-    const { parseKeyValue } = require('../src/model/nodes.js');
     const result = parseKeyValue('border, debug');
     expect(result.border).toBe('true');
     expect(result.debug).toBe('true');

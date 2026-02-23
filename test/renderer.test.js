@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parse } from '../src/parser/index.js';
 import { layout } from '../src/layout/grid-layout.js';
 import { HTMLRenderer } from '../src/renderer/html-renderer.js';
-import { renderToHTML, renderToPage } from '../src/index.js';
+import { renderToPage } from '../src/index.js';
 
 function renderTex(tex) {
   const { ast } = parse(tex);
