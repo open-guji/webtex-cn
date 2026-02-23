@@ -394,7 +394,14 @@ export class GridLayoutEngine {
       case NodeType.BANXIN_PAGE:
       case NodeType.BANXIN_LOWER:
       case NodeType.YUWEI:
-        // These belong inside walkBanxin; ignore if appearing naked
+      case NodeType.BLANK_PAGE:
+        // These belong in walkBanxin or front matter; ignore if appearing naked
+        break;
+
+      case NodeType.STYLE:
+        // Style wrapper: just walk children, layout doesn't change
+        this.placeItem(node);
+        this.advanceRowsByNodeText(node);
         break;
 
       default:
@@ -810,6 +817,8 @@ export function layout(ast) {
       frontMatter.push({ type: 'cover', node: child });
     } else if (child.type === NodeType.TITLE_PAGE) {
       frontMatter.push({ type: 'titlePage', node: child });
+    } else if (child.type === NodeType.BLANK_PAGE) {
+      frontMatter.push({ type: 'blankPage', node: child });
     } else {
       engine.walkNode(child);
     }

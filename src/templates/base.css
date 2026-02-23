@@ -353,6 +353,25 @@
   inline-size: calc(var(--wtc-textbox-height, 1) * var(--wtc-grid-height));
 }
 
+.wtc-textbox-floating {
+  position: absolute;
+}
+
+.wtc-textbox-outer-border {
+  outline: var(--wtc-outer-border-thickness, 2px) solid var(--wtc-border-color);
+  outline-offset: var(--wtc-outer-border-sep, 4px);
+}
+
+/* ---- Blank Page (空白页) ---- */
+.wtc-spread-blank {
+  position: relative;
+}
+
+/* ---- Style wrapper (样式) ---- */
+.wtc-style {
+  display: inline;
+}
+
 .wtc-textbox-fill {
   display: inline-flex;
   flex-direction: column;

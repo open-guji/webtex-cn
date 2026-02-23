@@ -130,6 +130,16 @@ export const commandRegistry = {
   },
   'FillTextBox': { alias: '填充文本框' },
 
+  // ---- Inline Style ----
+  '样式': {
+    args: ['optional', 'required'], node: 'style',
+    category: 'layout',
+    description: 'Inline style override (e.g. grid-height, font-size)',
+    status: 'full',
+  },
+  '樣式': { alias: '样式' },
+  'Style': { alias: '样式' },
+
   // ---- Decoration ----
   '圈点': {
     args: ['optional', 'required'], node: 'emphasis',
@@ -320,6 +330,7 @@ export const commandRegistry = {
     status: 'full',
   },
   '單抬': { alias: '单抬' },
+  '臣': { alias: '单抬' },
   '双抬': {
     args: [], node: 'taitou', defaultOpt: '2',
     category: 'layout',
@@ -593,6 +604,15 @@ export const environmentRegistry = {
     status: 'full',
   },
   '書名頁': { alias: '书名页' },
+  '空白页': {
+    node: 'blankPage',
+    hasOptions: true,
+    category: 'structure',
+    description: 'Blank page (no grid, no banxin, floating textboxes)',
+    status: 'full',
+  },
+  '空白頁': { alias: '空白页' },
+  'BlankPage': { alias: '空白页' },
   'Banxin': {
     node: 'banxin',
     category: 'structure',

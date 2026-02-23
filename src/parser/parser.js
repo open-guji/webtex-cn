@@ -464,6 +464,8 @@ export class Parser {
       'banxinLower': NodeType.BANXIN_LOWER,
       'yuwei': NodeType.YUWEI,
       'digitalContent': NodeType.DIGITAL_CONTENT,
+      'blankPage': NodeType.BLANK_PAGE,
+      'style': NodeType.STYLE,
     };
     return map[nodeName] || NodeType.UNKNOWN;
   }

@@ -47,6 +47,8 @@ export const NodeType = {
   BANXIN_LOWER: 'banxinLower',
   YUWEI: 'yuwei',
   DIGITAL_CONTENT: 'digitalContent',
+  BLANK_PAGE: 'blankPage',
+  STYLE: 'style',
   UNKNOWN: 'unknown',
 };
 

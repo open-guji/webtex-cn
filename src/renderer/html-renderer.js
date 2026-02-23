@@ -50,6 +50,8 @@ export class HTMLRenderer {
           pages.push(this.renderCover(fm.node, setupStyles));
         } else if (fm.type === 'titlePage') {
           pages.push(this.renderTitlePage(fm.node, setupStyles));
+        } else if (fm.type === 'blankPage') {
+          pages.push(this.renderBlankPage(fm.node, setupStyles));
         }
       }
     }
@@ -430,6 +432,9 @@ ${linesHTML.join('\n')}
       case NodeType.STAMP:
         return this.renderStamp(node);
 
+      case NodeType.STYLE:
+        return this.renderStyle(node);
+
       default:
         if (node.children && node.children.length > 0) {
           return this.renderChildren(node.children);
@@ -582,22 +587,86 @@ ${linesHTML.join('\n')}
     return `<div class="wtc-pizhu"${style ? ` style="${style}"` : ''}>${this.renderChildren(node.children)}</div>`;
   }
 
-  renderTextbox(node) {
+  /**
+   * Render a blank page (no grid, no banxin, floating textboxes only).
+   */
+  renderBlankPage(node, setupStyles = '') {
+    const floatsHTML = [];
+    const contentHTML = [];
+    for (const child of node.children) {
+      if (child.type === NodeType.TEXTBOX || child.type === NodeType.FILL_TEXTBOX ||
+        child.type === NodeType.STAMP) {
+        floatsHTML.push(this.renderNode(child));
+      } else if (child.type !== NodeType.NEWLINE && child.type !== NodeType.PARAGRAPH_BREAK) {
+        contentHTML.push(this.renderNode(child));
+      }
+    }
+    return `<div class="wtc-spread wtc-spread-blank"${setupStyles}>
+${floatsHTML.join('\n')}${contentHTML.join('')}
+</div>`;
+  }
+
+  /**
+   * Render inline style override: \样式[options]{content}
+   */
+  renderStyle(node) {
     const opts = node.options || {};
     let style = '';
+    if (opts['grid-height']) style += `--wtc-grid-height: ${opts['grid-height']};`;
+    if (opts['grid-width']) style += `--wtc-grid-width: ${opts['grid-width']};`;
+    if (opts['font-size']) style += `font-size: ${opts['font-size']};`;
+    if (opts.color) style += `color: ${this.parseColor(opts.color)};`;
+    if (opts['line-height']) style += `line-height: ${opts['line-height']};`;
+    return `<span class="wtc-style"${style ? ` style="${style}"` : ''}>${this.renderChildren(node.children)}</span>`;
+  }
+
+  renderTextbox(node) {
+    const opts = node.options || {};
+    const styles = [];
+    const isFloating = opts.floating === 'true';
+
+    // Position
+    if (opts.x) styles.push(`left: ${opts.x}`);
+    if (opts.y) styles.push(`top: ${opts.y}`);
+
+    // Size
     if (opts.height) {
       const h = opts.height;
       if (/^\d+$/.test(h)) {
-        style += `--wtc-textbox-height: ${h};`;
+        styles.push(`--wtc-textbox-height: ${h}`);
       } else {
-        style += `inline-size: ${h};`;
+        styles.push(`inline-size: ${h}`);
       }
     }
-    if (opts.border === 'true') style += 'border: 1px solid var(--wtc-border-color);';
-    if (opts['background-color']) style += `background-color: ${this.parseColor(opts['background-color'])};`;
-    if (opts['font-color']) style += `color: ${this.parseColor(opts['font-color'])};`;
-    if (opts['font-size']) style += `font-size: ${opts['font-size']};`;
-    return `<span class="wtc-textbox"${style ? ` style="${style}"` : ''}>${this.renderChildren(node.children)}</span>`;
+
+    // Font
+    if (opts['font-size']) styles.push(`font-size: ${opts['font-size']}`);
+    if (opts['grid-height']) styles.push(`--wtc-grid-height: ${opts['grid-height']}`);
+    if (opts['grid-width']) styles.push(`--wtc-grid-width: ${opts['grid-width']}`);
+
+    // Border
+    if (opts.border === 'true') styles.push('border: 1px solid var(--wtc-border-color)');
+    if (opts['border-shape'] === 'rect') {
+      const bw = opts['border-width'] || '1px';
+      const bm = opts['border-margin'] || '0';
+      styles.push(`border: ${bw} solid var(--wtc-border-color)`, `padding: ${bm}`);
+    }
+    if (opts['background-color']) styles.push(`background-color: ${this.parseColor(opts['background-color'])}`);
+    if (opts['font-color']) styles.push(`color: ${this.parseColor(opts['font-color'])}`);
+
+    // Outer border
+    if (opts['outer-border'] === 'true') {
+      const thickness = opts['outer-border-thickness'] || '2px';
+      const sep = opts['outer-border-sep'] || '4px';
+      styles.push(`--wtc-outer-border-thickness: ${thickness}`, `--wtc-outer-border-sep: ${sep}`);
+    }
+
+    const classes = ['wtc-textbox'];
+    if (isFloating) classes.push('wtc-textbox-floating');
+    if (opts['outer-border'] === 'true') classes.push('wtc-textbox-outer-border');
+
+    const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+    return `<span class="${classes.join(' ')}"${styleAttr}>${this.renderChildren(node.children)}</span>`;
   }
 
   renderFillTextbox(node) {
