@@ -625,8 +625,8 @@ ${floatsHTML.join('\n')}${contentHTML.join('')}
     const styles = [];
     const isFloating = opts.floating === 'true';
 
-    // Position
-    if (opts.x) styles.push(`left: ${opts.x}`);
+    // Position: clamp x so textbox stays within the page width
+    if (opts.x) styles.push(`left: min(${opts.x}, calc(100% - 5cm))`);
     if (opts.y) styles.push(`top: ${opts.y}`);
 
     // Size

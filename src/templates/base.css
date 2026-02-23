@@ -526,6 +526,14 @@
   padding: 0;
 }
 
+/* Scale floating elements: cfg coordinates/sizes target LuaTeX full page (~19cm)
+   but webtex renders a half-page (~10cm). Scale factor ≈ 0.5. */
+.wtc-spread-cover>.wtc-textbox-floating,
+.wtc-spread-blank>.wtc-textbox-floating {
+  transform: scale(0.5);
+  transform-origin: top left;
+}
+
 /* ---- Title Page (书名页) ---- */
 .wtc-spread-title-page {
   display: flex;
