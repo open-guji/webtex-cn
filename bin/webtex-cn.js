@@ -3,9 +3,9 @@
  * WebTeX-CN CLI
  * Usage:
  *   webtex-cn build input.tex [-o output/]
- *   webtex-cn serve input.tex [-p port]
+ *   webtex-cn serve input.tex [-p port] [--pdf reference.pdf]
  */
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname, basename, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
@@ -42,17 +42,18 @@ function usage() {
   console.log(`WebTeX-CN CLI
 
 Usage:
-  webtex-cn build <input.tex> [-o <output-dir>]    Build static HTML
-  webtex-cn serve <input.tex> [-p <port>]           Preview server
+  webtex-cn build <input.tex> [-o <output-dir>]        Build static HTML
+  webtex-cn serve <input.tex> [-p <port>] [--pdf ref]  Preview server
 
 Options:
   -o, --output <dir>    Output directory (default: ./output)
   -p, --port <port>     Server port (default: 8080)
+  --pdf <file>          PDF reference for side-by-side comparison
   -h, --help            Show this help`);
 }
 
 function parseArgs(args) {
-  const result = { command: null, input: null, output: './output', port: 8080 };
+  const result = { command: null, input: null, output: './output', port: 8080, pdfRef: null };
   let i = 0;
   if (args.length === 0) return result;
 
@@ -68,6 +69,8 @@ function parseArgs(args) {
       result.output = args[++i];
     } else if (arg === '-p' || arg === '--port') {
       result.port = parseInt(args[++i], 10);
+    } else if (arg === '--pdf') {
+      result.pdfRef = args[++i];
     } else if (arg === '-h' || arg === '--help') {
       result.command = 'help';
     } else if (!result.input) {
@@ -136,10 +139,29 @@ ${pagesContent}
   console.log(`CSS files copied to ${outputDir}/`);
 }
 
-async function serveCommand(inputPath, port) {
+async function serveCommand(inputPath, port, pdfRefPath = null) {
   if (!inputPath || !existsSync(inputPath)) {
     console.error(`Error: Input file not found: ${inputPath}`);
     process.exit(1);
+  }
+
+  // Check if PDF reference exists
+  let pdfPagesDir = null;
+  if (pdfRefPath) {
+    if (!existsSync(pdfRefPath)) {
+      console.warn(`Warning: PDF reference not found: ${pdfRefPath}`);
+      pdfRefPath = null;
+    } else {
+      // Assume PDF pages are already converted in output/compare/pdf-pages/
+      const projectRoot = join(__dirname, '..');
+      pdfPagesDir = join(projectRoot, 'output', 'compare', 'pdf-pages');
+      if (!existsSync(pdfPagesDir)) {
+        console.warn(`Warning: PDF pages directory not found: ${pdfPagesDir}`);
+        console.warn(`Run visual-compare first to generate PDF page images.`);
+        pdfRefPath = null;
+        pdfPagesDir = null;
+      }
+    }
   }
 
   const { parse, layout, HTMLRenderer, extractTemplateName } = await loadLib();
@@ -149,7 +171,7 @@ async function serveCommand(inputPath, port) {
     const url = req.url === '/' ? '/index.html' : req.url;
 
     // Serve generated HTML
-    if (url === '/index.html') {
+    if (url === '/index.html' || url.startsWith('/index.html?')) {
       const texSource = readFileSync(resolve(inputPath), 'utf8');
       const cfgSource = loadCfgSource(texSource, inputPath, extractTemplateName);
       const { ast } = parse(texSource, cfgSource ? { cfgSource } : {});
@@ -157,11 +179,89 @@ async function serveCommand(inputPath, port) {
       const renderer = new HTMLRenderer(ast);
       const templateId = layoutResult.templateId;
       const pageHTMLs = renderer.renderFromLayout(layoutResult);
-      const pagesContent = pageHTMLs.map(h =>
-        `<div class="wtc-page" data-template="${templateId}">${h}</div>`
-      ).join('\n');
 
-      const html = `<!DOCTYPE html>
+      // Parse page parameter
+      const urlObj = new URL(url, `http://localhost:${port}`);
+      const requestedPage = parseInt(urlObj.searchParams.get('page') || '1', 10);
+      const pageIndex = requestedPage - 1;
+
+      let html;
+      if (pdfPagesDir && pageIndex >= 0 && pageIndex < pageHTMLs.length) {
+        // Three-column comparison mode
+        const pdfFiles = readdirSync(pdfPagesDir).filter(f => f.endsWith('.png')).sort();
+        const pdfPageFile = pdfFiles[pageIndex] || null;
+
+        const navigation = `<div class="nav">
+          ${pageIndex > 0 ? `<a href="?page=${pageIndex}">&larr; Prev</a>` : '<span>&larr; Prev</span>'}
+          <span>Page ${requestedPage} / ${pageHTMLs.length}</span>
+          ${pageIndex < pageHTMLs.length - 1 ? `<a href="?page=${pageIndex + 2}">Next &rarr;</a>` : '<span>Next &rarr;</span>'}
+        </div>`;
+
+        const texDisplay = `<pre class="tex-source">${texSource.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+
+        const htmlDisplay = `<div class="wtc-page" data-template="${templateId}">${pageHTMLs[pageIndex]}</div>`;
+
+        const pdfDisplay = pdfPageFile
+          ? `<img src="/pdf-page/${pdfPageFile}" alt="PDF Page ${requestedPage}" style="max-width: 100%; border: 1px solid #ccc;">`
+          : `<p>PDF page not found</p>`;
+
+        html = `<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page ${requestedPage} - ${ast.title || 'WebTeX-CN'}</title>
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="${templateId}.css">
+<style>
+  body { margin: 0; padding: 20px; font-family: sans-serif; }
+  .nav { text-align: center; margin-bottom: 20px; }
+  .nav a { margin: 0 10px; text-decoration: none; color: #0066cc; }
+  .nav span { margin: 0 10px; color: #999; }
+  .container { display: flex; gap: 20px; }
+  .column { flex: 1; overflow: auto; }
+  .column h3 { margin: 0 0 10px 0; font-size: 14px; color: #666; }
+  .tex-source {
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    background: #f5f5f5;
+    padding: 10px;
+    border: 1px solid #ddd;
+    overflow: auto;
+    max-height: 800px;
+  }
+  .wtc-page {
+    display: inline-block;
+    margin: 0 auto;
+  }
+</style>
+</head>
+<body>
+${navigation}
+<div class="container">
+  <div class="column">
+    <h3>TeX Source</h3>
+    ${texDisplay}
+  </div>
+  <div class="column">
+    <h3>WebTeX-CN Output</h3>
+    ${htmlDisplay}
+  </div>
+  <div class="column">
+    <h3>PDF Reference (Page ${requestedPage})</h3>
+    ${pdfDisplay}
+  </div>
+</div>
+</body>
+</html>`;
+      } else {
+        // Normal single-page mode
+        const pagesContent = pageHTMLs.map(h =>
+          `<div class="wtc-page" data-template="${templateId}">${h}</div>`
+        ).join('\n');
+
+        html = `<!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
@@ -174,10 +274,23 @@ async function serveCommand(inputPath, port) {
 ${pagesContent}
 </body>
 </html>`;
+      }
 
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
       return;
+    }
+
+    // Serve PDF page images
+    if (pdfPagesDir && url.startsWith('/pdf-page/')) {
+      const filename = url.replace('/pdf-page/', '');
+      const imgPath = join(pdfPagesDir, filename);
+      if (existsSync(imgPath)) {
+        const img = readFileSync(imgPath);
+        res.writeHead(200, { 'Content-Type': 'image/png' });
+        res.end(img);
+        return;
+      }
     }
 
     // Serve CSS files
@@ -196,7 +309,12 @@ ${pagesContent}
   server.listen(port, () => {
     console.log(`WebTeX-CN preview server`);
     console.log(`  File: ${inputPath}`);
-    console.log(`  URL:  http://localhost:${port}/`);
+    if (pdfPagesDir) {
+      console.log(`  Mode: Comparison (with PDF reference)`);
+      console.log(`  URL:  http://localhost:${port}/?page=1`);
+    } else {
+      console.log(`  URL:  http://localhost:${port}/`);
+    }
     console.log(`  Press Ctrl+C to stop`);
   });
 }
@@ -209,7 +327,7 @@ switch (args.command) {
     await buildCommand(args.input, args.output);
     break;
   case 'serve':
-    await serveCommand(args.input, args.port);
+    await serveCommand(args.input, args.port, args.pdfRef);
     break;
   case 'help':
   default:
