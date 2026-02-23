@@ -365,6 +365,8 @@
 /* ---- Blank Page (空白页) ---- */
 .wtc-spread-blank {
   position: relative;
+  overflow: hidden;
+  padding: 0;
 }
 
 /* ---- Style wrapper (样式) ---- */
@@ -517,12 +519,11 @@
 
 /* ---- Cover (封面) ---- */
 .wtc-spread-cover {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 100%;
   height: var(--wtc-page-height);
   position: relative;
+  padding: 0;
 }
 
 /* ---- Title Page (书名页) ---- */

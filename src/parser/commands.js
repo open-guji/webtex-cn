@@ -247,6 +247,7 @@ export const commandRegistry = {
   },
   'HuanHang': { alias: '换行' },
   '換行': { alias: '换行' },
+  'newline': { alias: '换行' },
   'newpage': {
     args: [], node: 'newPage',
     category: 'layout',
