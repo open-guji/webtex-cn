@@ -145,7 +145,38 @@ async function serveCommand(inputPath, port, pdfRefPath = null) {
     process.exit(1);
   }
 
-  // Check if PDF reference exists
+  // Auto-detect PDF reference if not provided
+  const projectRoot = join(__dirname, '..');
+  if (!pdfRefPath) {
+    // Try to find PDF in output/ directory
+    const inputDir = dirname(resolve(inputPath));
+    const inputBase = basename(inputPath, '.tex');
+    const possiblePdfPaths = [
+      join(projectRoot, 'output', `${inputBase}-column1.pdf`),
+      join(projectRoot, 'output', `${inputBase}.pdf`),
+      join(inputDir, `${inputBase}-column1.pdf`),
+      join(inputDir, `${inputBase}.pdf`),
+    ];
+    for (const path of possiblePdfPaths) {
+      if (existsSync(path)) {
+        pdfRefPath = path;
+        console.log(`Auto-detected PDF reference: ${path}`);
+        break;
+      }
+    }
+
+    // If still not found, look for any PDF with similar name in output/
+    if (!pdfRefPath && existsSync(join(projectRoot, 'output'))) {
+      const outputFiles = readdirSync(join(projectRoot, 'output'));
+      const pdfFiles = outputFiles.filter(f => f.endsWith('-column1.pdf') || f.endsWith('.pdf'));
+      if (pdfFiles.length > 0) {
+        pdfRefPath = join(projectRoot, 'output', pdfFiles[0]);
+        console.log(`Auto-detected PDF reference: ${pdfRefPath}`);
+      }
+    }
+  }
+
+  // Check if PDF reference exists and get pages directory
   let pdfPagesDir = null;
   if (pdfRefPath) {
     if (!existsSync(pdfRefPath)) {
@@ -153,7 +184,6 @@ async function serveCommand(inputPath, port, pdfRefPath = null) {
       pdfRefPath = null;
     } else {
       // Assume PDF pages are already converted in output/compare/pdf-pages/
-      const projectRoot = join(__dirname, '..');
       pdfPagesDir = join(projectRoot, 'output', 'compare', 'pdf-pages');
       if (!existsSync(pdfPagesDir)) {
         console.warn(`Warning: PDF pages directory not found: ${pdfPagesDir}`);
@@ -168,10 +198,19 @@ async function serveCommand(inputPath, port, pdfRefPath = null) {
   const templatesDir = join(srcDir, 'templates');
 
   const server = createServer((req, res) => {
-    const url = req.url === '/' ? '/index.html' : req.url;
+    let url = req.url === '/' ? '/index.html' : req.url;
+
+    // If we have PDF pages and no page param, redirect to ?page=1
+    if (pdfPagesDir && (url === '/index.html' || url === '/')) {
+      res.writeHead(302, { 'Location': '/?page=1' });
+      res.end();
+      return;
+    }
+
+    if (url === '/') url = '/index.html';
 
     // Serve generated HTML
-    if (url === '/index.html' || url.startsWith('/index.html?')) {
+    if (url === '/index.html' || url.startsWith('/index.html?') || url.startsWith('/?')) {
       const texSource = readFileSync(resolve(inputPath), 'utf8');
       const cfgSource = loadCfgSource(texSource, inputPath, extractTemplateName);
       const { ast } = parse(texSource, cfgSource ? { cfgSource } : {});
@@ -310,10 +349,13 @@ ${pagesContent}
     console.log(`WebTeX-CN preview server`);
     console.log(`  File: ${inputPath}`);
     if (pdfPagesDir) {
-      console.log(`  Mode: Comparison (with PDF reference)`);
-      console.log(`  URL:  http://localhost:${port}/?page=1`);
-    } else {
+      console.log(`  Mode: Three-column comparison (TeX | WebTeX | PDF)`);
+      console.log(`  PDF:  ${pdfRefPath}`);
       console.log(`  URL:  http://localhost:${port}/`);
+    } else {
+      console.log(`  Mode: Standard preview`);
+      console.log(`  URL:  http://localhost:${port}/`);
+      console.log(`  Tip:  Add --pdf <file> for side-by-side comparison`);
     }
     console.log(`  Press Ctrl+C to stop`);
   });
