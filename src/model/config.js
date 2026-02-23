@@ -62,6 +62,10 @@ export function resolveConfig(ast) {
   const grid = getGridConfig(templateId);
   const setupCommands = ast.setupCommands || [];
 
+  // Detect digital mode from documentclass (stored at AST root level)
+  const documentClass = ast.documentClass || 'ltc-guji';
+  const isDigitalMode = documentClass.includes('digital');
+
   // Determine punctuation mode from setup commands
   let punctMode = 'normal';
   for (const cmd of setupCommands) {
@@ -87,6 +91,8 @@ export function resolveConfig(ast) {
     templateId,
     grid,
     punctMode,
+    isDigitalMode,
+    documentClass,
     meta: {
       title: ast.title || '',
       chapter: ast.chapter || '',

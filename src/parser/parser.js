@@ -323,7 +323,8 @@ export class Parser {
     }
 
     if (def.node === 'setIndent') {
-      node.value = requiredArgs[0] || '0';
+      // \缩进[N] uses optional arg, \设置缩进{N} uses required arg
+      node.value = optionalArg || requiredArgs[0] || '0';
     }
 
     // Stamp: store raw args
