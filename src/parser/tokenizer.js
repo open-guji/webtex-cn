@@ -219,7 +219,7 @@ export class Tokenizer {
         if (i > 0) {
           this.tokens.push({ type: TokenType.PARAGRAPH_BREAK, value: '' });
         }
-        const collapsed = parts[i].replace(/[ \t]+/g, ' ');
+        const collapsed = parts[i].replace(/[ \t]*\n[ \t]*/g, '').replace(/[ \t]+/g, ' ');
         if (collapsed.trim() || collapsed === ' ') {
           this.tokens.push({ type: TokenType.TEXT, value: collapsed });
         }

@@ -84,7 +84,9 @@
 
 /* ---- Reset ---- */
 .wtc-scope,
-.wtc-scope :where(*, *::before, *::after) {
+.wtc-scope :where(*, *::before, *::after),
+.wtc-page,
+.wtc-page :where(*, *::before, *::after) {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -113,6 +115,7 @@
 /* ---- Spread (single half-page with banxin) ---- */
 .wtc-spread {
   display: flex;
+  box-sizing: border-box;
   width: 100%;
   height: var(--wtc-page-height);
   padding: var(--wtc-margin-top) var(--wtc-margin-right) var(--wtc-margin-bottom) var(--wtc-margin-left);
@@ -147,6 +150,7 @@
   border: var(--wtc-border-thickness) solid var(--wtc-border-color);
   padding: var(--wtc-border-padding-top) 0 var(--wtc-border-padding-bottom) 0;
   height: 100%;
+  min-width: 100%;
 }
 
 /* ---- Content Area (竖排) ---- */

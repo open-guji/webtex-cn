@@ -147,9 +147,10 @@ describe('GridLayoutEngine', () => {
         ]
       };
       engine.walkNode(paraNode);
-      // 20 chars with effectiveRows=18: 18 fill col 0, 2 in col 1
-      expect(engine.currentCol).toBe(1);
-      expect(engine.currentRow).toBe(2);
+      // 20 chars with 18 content rows (21-3): 18 fill col 0, 2 in col 1
+      // Paragraph end forces column advance → col 2, row 0
+      expect(engine.currentCol).toBe(2);
+      expect(engine.currentRow).toBe(0);
     });
   });
 
