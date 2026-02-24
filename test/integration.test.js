@@ -119,7 +119,7 @@ describe('Integration: full TeX to HTML pipeline', () => {
   it('selects correct template CSS', () => {
     const { ast } = parse(showcase);
     const renderer = new HTMLRenderer(ast);
-    expect(renderer.templateId).toBe('siku-quanshu-colored');
+    expect(renderer.templateId).toBe('guji-colored');
   });
 
   it('handles empty content gracefully', () => {
@@ -192,7 +192,7 @@ describe('Integration: full TeX to HTML pipeline', () => {
 
   it('renderToPage includes data-template attribute', () => {
     const page = renderToPage('\\documentclass[红楼梦甲戌本]{ltc-guji}\\begin{document}\\begin{正文}text\\end{正文}\\end{document}');
-    expect(page).toContain('data-template="honglou"');
+    expect(page).toContain('data-template="guji-honglou"');
   });
 
   it('无标点模式 strips punctuation from output', () => {

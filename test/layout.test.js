@@ -20,13 +20,13 @@ describe('GridLayoutEngine', () => {
     it('produces correct grid config from template', () => {
       const result = layoutTex('\\documentclass[四库全书]{ltc-guji}\\begin{document}\\begin{正文}天\\end{正文}\\end{document}');
       expect(result.gridConfig).toEqual({ nRows: 21, nCols: 8 });
-      expect(result.templateId).toBe('siku-quanshu');
+      expect(result.templateId).toBe('guji-default');
     });
 
     it('produces honglou grid config', () => {
       const result = layoutTex('\\documentclass[红楼梦甲戌本]{ltc-guji}\\begin{document}\\begin{正文}天\\end{正文}\\end{document}');
-      expect(result.gridConfig).toEqual({ nRows: 20, nCols: 9 });
-      expect(result.templateId).toBe('honglou');
+      expect(result.gridConfig).toEqual({ nRows: 18, nCols: 12 });
+      expect(result.templateId).toBe('guji-honglou');
     });
   });
 

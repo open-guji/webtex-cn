@@ -8,7 +8,7 @@
 import { NodeType } from '../model/nodes.js';
 import { resolveTemplateId, getGridConfig } from '../config/templates.js';
 import { cssOverridesToStyleAttr } from '../model/config.js';
-import { getPlainText, escapeHTML, splitChildrenAtCharCount } from '../utils/text.js';
+import { getPlainText, escapeHTML, splitChildrenAtCharCount, convertToPt } from '../utils/text.js';
 import { splitJiazhuMulti } from '../utils/jiazhu.js';
 import { getJudouRichText } from '../utils/judou.js';
 import { LayoutMarker } from '../layout/grid-layout.js';
@@ -254,10 +254,40 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
    */
   renderCover(node, setupStyles = '') {
     const opts = node.options || {};
-    let bgStyle = '';
+    const styles = [];
+
+    // Background color
     if (opts['底色']) {
-      bgStyle = `background-color: ${this.parseColor(opts['底色'])};`;
+      styles.push(`background-color: ${this.parseColor(opts['底色'])}`);
     }
+
+    // Background image
+    if (opts['背景图片']) {
+      styles.push(`background-image: url('${opts['背景图片']}')`);
+      styles.push(`background-size: ${opts['背景尺寸'] || 'cover'}`);
+      styles.push(`background-position: ${opts['背景位置'] || 'center'}`);
+      styles.push(`background-repeat: ${opts['背景重复'] || 'no-repeat'}`);
+    }
+
+    // Border decoration
+    if (opts['边框']) {
+      styles.push(`border: ${opts['边框']}`);
+    }
+    if (opts['边框颜色']) {
+      styles.push(`border-color: ${this.parseColor(opts['边框颜色'])}`);
+    }
+    if (opts['边框宽度']) {
+      styles.push(`border-width: ${opts['边框宽度']}`);
+    }
+    if (opts['边框样式']) {
+      styles.push(`border-style: ${opts['边框样式']}`);
+    }
+
+    // Padding
+    if (opts['内边距']) {
+      styles.push(`padding: ${opts['内边距']}`);
+    }
+
     const floatsHTML = [];
     const contentHTML = [];
     for (const child of node.children) {
@@ -268,7 +298,25 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
         contentHTML.push(this.renderNode(child));
       }
     }
-    return `<div class="wtc-spread wtc-spread-cover"${setupStyles} style="${bgStyle}">
+
+    // Merge setupStyles (from cssOverrides) and cover-specific styles
+    let styleAttr = '';
+    if (setupStyles) {
+      // setupStyles is like ' style="--wtc-font-family: TW-Kai"'
+      // Extract the content between quotes and merge
+      const match = setupStyles.match(/style="([^"]*)"/);
+      if (match && styles.length > 0) {
+        styleAttr = ` style="${match[1]}; ${styles.join('; ')}"`;
+      } else if (match) {
+        styleAttr = setupStyles;
+      } else if (styles.length > 0) {
+        styleAttr = ` style="${styles.join('; ')}"`;
+      }
+    } else if (styles.length > 0) {
+      styleAttr = ` style="${styles.join('; ')}"`;
+    }
+
+    return `<div class="wtc-spread wtc-spread-cover"${styleAttr}>
 ${floatsHTML.join('\n')}${contentHTML.join('')}
 </div>`;
   }
@@ -277,13 +325,31 @@ ${floatsHTML.join('\n')}${contentHTML.join('')}
    * Render a title page (full-page with vertical text lines).
    */
   renderTitlePage(node, setupStyles = '') {
+    const opts = node.options || {};
+    let containerStyle = '';
+
+    // Line gap (spacing between lines)
+    if (opts['行间距'] || opts['gap']) {
+      containerStyle += `gap: ${opts['行间距'] || opts['gap']};`;
+    }
+
+    // Background color
+    if (opts['底色']) {
+      containerStyle += `background-color: ${this.parseColor(opts['底色'])};`;
+    }
+
+    // Padding
+    if (opts['内边距']) {
+      containerStyle += `padding: ${opts['内边距']};`;
+    }
+
     const linesHTML = [];
     for (const child of node.children) {
       if (child.type === NodeType.LINE) {
         linesHTML.push(this.renderLine(child));
       }
     }
-    return `<div class="wtc-spread wtc-spread-title-page"${setupStyles}>
+    return `<div class="wtc-spread wtc-spread-title-page"${setupStyles}${containerStyle ? ` style="${containerStyle}"` : ''}>
 ${linesHTML.join('\n')}
 </div>`;
   }
@@ -294,14 +360,54 @@ ${linesHTML.join('\n')}
   renderLine(node) {
     const opts = node.options || {};
     let style = '';
+    let className = 'wtc-line';
+
+    // Width
     if (opts.width) style += `width: ${opts.width};`;
+
+    // Font settings
     if (opts['font-size']) style += `font-size: ${opts['font-size']};`;
     if (opts['grid-height']) style += `--wtc-grid-height: ${opts['grid-height']};`;
+    if (opts['letter-spacing'] || opts['字间距']) {
+      style += `letter-spacing: ${opts['letter-spacing'] || opts['字间距']};`;
+    }
+    if (opts['font-weight'] || opts['字重']) {
+      style += `font-weight: ${opts['font-weight'] || opts['字重']};`;
+    }
+    if (opts['color'] || opts['颜色']) {
+      style += `color: ${this.parseColor(opts['color'] || opts['颜色'])};`;
+    }
+
+    // Alignment
     if (opts.align === 'top') style += 'justify-content: flex-start;';
     else if (opts.align === 'bottom') style += 'justify-content: flex-end;';
     else if (opts.align === 'center') style += 'justify-content: center;';
+
+    // Border/decoration
+    if (opts['边框']) {
+      style += `border: ${opts['边框']};`;
+    }
+    if (opts['装饰线']) {
+      className += ' wtc-line-decorated';
+      if (opts['装饰线'] === 'left' || opts['装饰线'] === '左') {
+        style += 'border-left: 1px solid currentColor; padding-left: 0.5em;';
+      } else if (opts['装饰线'] === 'right' || opts['装饰线'] === '右') {
+        style += 'border-right: 1px solid currentColor; padding-right: 0.5em;';
+      } else if (opts['装饰线'] === 'both' || opts['装饰线'] === '双边') {
+        style += 'border-left: 1px solid currentColor; border-right: 1px solid currentColor; padding: 0 0.5em;';
+      }
+    }
+
+    // Padding & margin
+    if (opts['padding'] || opts['内边距']) {
+      style += `padding: ${opts['padding'] || opts['内边距']};`;
+    }
+    if (opts['margin'] || opts['外边距']) {
+      style += `margin: ${opts['margin'] || opts['外边距']};`;
+    }
+
     const contentHTML = this.renderChildren(node.children);
-    return `<div class="wtc-line"${style ? ` style="${style}"` : ''}>${contentHTML}</div>`;
+    return `<div class="${className}"${style ? ` style="${style}"` : ''}>${contentHTML}</div>`;
   }
 
   /**
@@ -640,30 +746,39 @@ ${floatsHTML.join('\n')}${contentHTML.join('')}
     const styles = [];
     const isFloating = opts.floating === 'true';
 
-    // Position: clamp x so textbox stays within the page width
-    if (opts.x) styles.push(`left: min(${opts.x}, calc(100% - 5cm))`);
-    if (opts.y) styles.push(`top: ${opts.y}`);
+    // Position: LuaTeX-CN uses right-top origin (x=distance from right edge, y=distance from top)
+    // Convert units to pt for consistency
+    if (opts.x) {
+      const xPt = convertToPt(opts.x);
+      styles.push(`right: ${xPt}`);
+    }
+    if (opts.y) {
+      const yPt = convertToPt(opts.y);
+      styles.push(`top: ${yPt}`);
+    }
 
     // Size
     if (opts.height) {
       const h = opts.height;
       if (/^\d+$/.test(h)) {
+        // Pure number = character count
         styles.push(`--wtc-textbox-height: ${h}`);
       } else {
-        styles.push(`inline-size: ${h}`);
+        // Length value, convert to pt
+        styles.push(`inline-size: ${convertToPt(h)}`);
       }
     }
 
     // Font
-    if (opts['font-size']) styles.push(`font-size: ${opts['font-size']}`);
-    if (opts['grid-height']) styles.push(`--wtc-grid-height: ${opts['grid-height']}`);
-    if (opts['grid-width']) styles.push(`--wtc-grid-width: ${opts['grid-width']}`);
+    if (opts['font-size']) styles.push(`font-size: ${convertToPt(opts['font-size'])}`);
+    if (opts['grid-height']) styles.push(`--wtc-grid-height: ${convertToPt(opts['grid-height'])}`);
+    if (opts['grid-width']) styles.push(`--wtc-grid-width: ${convertToPt(opts['grid-width'])}`);
 
     // Border
     if (opts.border === 'true') styles.push('border: 1px solid var(--wtc-border-color)');
     if (opts['border-shape'] === 'rect') {
-      const bw = opts['border-width'] || '1px';
-      const bm = opts['border-margin'] || '0';
+      const bw = convertToPt(opts['border-width'] || '1px');
+      const bm = convertToPt(opts['border-margin'] || '0');
       styles.push(`border: ${bw} solid var(--wtc-border-color)`, `padding: ${bm}`);
     }
     if (opts['background-color']) styles.push(`background-color: ${this.parseColor(opts['background-color'])}`);
@@ -671,8 +786,8 @@ ${floatsHTML.join('\n')}${contentHTML.join('')}
 
     // Outer border
     if (opts['outer-border'] === 'true') {
-      const thickness = opts['outer-border-thickness'] || '2px';
-      const sep = opts['outer-border-sep'] || '4px';
+      const thickness = convertToPt(opts['outer-border-thickness'] || '2pt');
+      const sep = convertToPt(opts['outer-border-sep'] || '4pt');
       styles.push(`--wtc-outer-border-thickness: ${thickness}`, `--wtc-outer-border-sep: ${sep}`);
     }
 

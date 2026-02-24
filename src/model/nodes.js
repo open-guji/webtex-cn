@@ -61,7 +61,7 @@ export function createNode(type, props = {}) {
 
 /**
  * Parse a key=value string into an object.
- * Handles nested braces like color={180, 95, 75}.
+ * Handles nested braces like color={180, 95, 75} and nested key-value like chapter={align=right}.
  */
 export function parseKeyValue(str) {
   if (!str || !str.trim()) return {};
@@ -80,7 +80,9 @@ export function parseKeyValue(str) {
 
     if (depth === 0 && ch === ',') {
       if (currentKey.trim()) {
-        result[currentKey.trim()] = inValue ? currentValue.trim() : 'true';
+        const key = currentKey.trim();
+        const value = inValue ? currentValue.trim() : 'true';
+        result[key] = processValue(value);
       }
       currentKey = '';
       currentValue = '';
@@ -99,7 +101,7 @@ export function parseKeyValue(str) {
   if (currentKey.trim()) {
     const key = currentKey.trim();
     if (inValue) {
-      result[key] = currentValue.trim();
+      result[key] = processValue(currentValue.trim());
     } else {
       // If it looks like a single number, treat it as 'value'
       if (/^\d+$/.test(key)) {
@@ -111,4 +113,19 @@ export function parseKeyValue(str) {
   }
 
   return result;
+}
+
+/**
+ * Process a value - recursively parse if it's a nested key-value structure.
+ */
+function processValue(value) {
+  // Check if value is wrapped in braces and contains '=' (nested key-value)
+  if (value.startsWith('{') && value.endsWith('}')) {
+    const inner = value.slice(1, -1).trim();
+    // Check if it contains '=' (nested key-value structure)
+    if (inner.includes('=')) {
+      return parseKeyValue(inner);
+    }
+  }
+  return value;
 }

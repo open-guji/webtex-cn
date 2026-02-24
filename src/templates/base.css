@@ -13,6 +13,8 @@
   --wtc-margin-left: 50px;
   --wtc-margin-right: 50px;
 
+  /* Page dimensions (optional, for explicit sizing; leave unset for auto-calc) */
+
   /* Grid (derived from font-size × line-height) */
   --wtc-grid-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
   --wtc-grid-height: calc(var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio)));
@@ -24,11 +26,13 @@
   --wtc-letter-spacing-ratio: 0.05;
   --wtc-letter-spacing: calc(var(--wtc-letter-spacing-ratio) * 1em);
   --wtc-font-color: #1a1a1a;
+  --wtc-vertical-align: center;
 
   /* Border */
   --wtc-border-show: 1;
   --wtc-border-thickness: 0.5px;
   --wtc-border-color: #333;
+  --wtc-outer-border-show: 1;
   --wtc-outer-border-thickness: 3px;
   --wtc-outer-border-sep: 3px;
   --wtc-border-padding-top: 8px;
@@ -47,11 +51,13 @@
   --wtc-jiazhu-line-height: calc(var(--wtc-line-height) / 2);
   --wtc-jiazhu-color: inherit;
   --wtc-jiazhu-gap: 0px;
+  --wtc-jiazhu-align: outward;
 
   /* SideNote */
   --wtc-sidenote-font-size: 13px;
   --wtc-sidenote-color: #c00;
   --wtc-sidenote-line-height: 1.25;
+  --wtc-sidenote-grid-height: 20px;
 
   /* MeiPi */
   --wtc-meipi-font-size: 14px;
@@ -62,11 +68,17 @@
   --wtc-pizhu-font-size: 14px;
   --wtc-pizhu-color: #c00;
   --wtc-pizhu-line-height: 1.3;
+  --wtc-pizhu-grid-width: 20px;
+  --wtc-pizhu-grid-height: 19px;
 
   /* Banxin */
+  --wtc-banxin-enabled: 1;
   --wtc-banxin-width: 40px;
   --wtc-banxin-upper-ratio: 0.282;
   --wtc-banxin-middle-ratio: 0.563;
+  --wtc-banxin-upper-yuwei: 1;
+  --wtc-banxin-lower-yuwei: 0;
+  --wtc-banxin-divider: 1;
   --wtc-banxin-font-size: 13px;
   --wtc-banxin-chapter-font-size: 13px;
   --wtc-banxin-page-font-size: 11px;
@@ -103,13 +115,14 @@
 
 /* ---- Page ---- */
 .wtc-page {
-  width: var(--wtc-page-width);
-  height: var(--wtc-page-height);
+  /* Use explicit paper dimensions if set, otherwise fall back to calculated */
+  width: var(--wtc-paper-width, var(--wtc-page-width));
+  height: var(--wtc-paper-height, var(--wtc-page-height));
   background: var(--wtc-page-background);
   margin: 20px auto;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
   position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* ---- Spread (single half-page with banxin) ---- */
@@ -117,19 +130,24 @@
   display: flex;
   box-sizing: border-box;
   width: 100%;
-  height: var(--wtc-page-height);
-  padding: var(--wtc-margin-top) var(--wtc-margin-right) var(--wtc-margin-bottom) var(--wtc-margin-left);
+  height: 100%;
+  padding-top: var(--wtc-margin-top);
+  padding-bottom: var(--wtc-margin-bottom);
   position: relative;
 }
 
-/* Right half: content on right, banxin on left */
+/* Right half: content on right, banxin on left (cut edge) */
 .wtc-spread-right {
   flex-direction: row-reverse;
+  padding-right: var(--wtc-margin-right);
+  padding-left: 0;
 }
 
-/* Left half: banxin on right, content on left */
+/* Left half: banxin on right (cut edge), content on left */
 .wtc-spread-left {
   flex-direction: row;
+  padding-left: var(--wtc-margin-left);
+  padding-right: 0;
 }
 
 /* ---- Half Page ---- */
@@ -214,7 +232,7 @@
 
 /* Upper: book title + upper fish tail */
 .wtc-banxin-upper {
-  flex: 0 0 28.2%;
+  flex: 0 0 calc(var(--wtc-banxin-upper-ratio) * 100%);
   justify-content: flex-end;
   gap: 4px;
 }
@@ -233,7 +251,7 @@
 
 /* Middle: chapter/volume info */
 .wtc-banxin-middle {
-  flex: 0 0 56.3%;
+  flex: 0 0 calc(var(--wtc-banxin-middle-ratio) * 100%);
   font-size: var(--wtc-banxin-chapter-font-size);
   color: var(--wtc-font-color);
   border-top: var(--wtc-border-thickness) solid var(--wtc-border-color);
@@ -245,7 +263,7 @@
   text-orientation: upright;
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: var(--wtc-banxin-chapter-align, center);
   align-items: flex-start;
   width: 100%;
   height: 100%;
@@ -260,7 +278,7 @@
 
 /* Lower: page number + lower fish tail */
 .wtc-banxin-lower {
-  flex: 0 0 15.5%;
+  flex: 0 0 calc((1 - var(--wtc-banxin-upper-ratio) - var(--wtc-banxin-middle-ratio)) * 100%);
   font-size: var(--wtc-banxin-page-font-size);
 }
 
@@ -536,18 +554,17 @@
 /* ---- Cover (封面) ---- */
 .wtc-spread-cover {
   display: block;
-  width: 100%;
+  /* Cover pages are full-spread (double width: left + right half-pages) */
+  width: calc(2 * var(--wtc-half-content-width) + var(--wtc-banxin-width));
   height: var(--wtc-page-height);
   position: relative;
   padding: 0;
 }
 
-/* Scale floating elements: cfg coordinates/sizes target LuaTeX full page (~19cm)
-   but webtex renders a half-page (~10cm). Scale factor ≈ 0.5. */
-.wtc-spread-cover>.wtc-textbox-floating,
+/* Note: Cover pages render as full pages, so floating textboxes use their original
+   coordinates from .cfg files without scaling. Blank pages also render full-size. */
 .wtc-spread-blank>.wtc-textbox-floating {
-  transform: scale(0.5);
-  transform-origin: top left;
+  /* No scaling needed for blank pages */
 }
 
 /* ---- Title Page (书名页) ---- */

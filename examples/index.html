@@ -229,8 +229,8 @@
     </label>
     <label>模板:
       <select id="template-select">
-        <option value="siku-quanshu" selected>四库全书 (黑白)</option>
-        <option value="siku-quanshu-colored">四库全书 (彩色)</option>
+        <option value="siku-quanshu">四库全书 (黑白)</option>
+        <option value="siku-quanshu-colored" selected>四库全书 (彩色)</option>
         <option value="honglou">红楼梦甲戌本</option>
         <option value="minimal">极简</option>
       </select>
@@ -410,9 +410,13 @@
       activePage.style.zoom = '';
       requestAnimationFrame(() => {
         const panelWidth = previewPanel.clientWidth - 40;
+        const panelHeight = previewPanel.clientHeight - 80;
         const pageWidth = activePage.offsetWidth;
-        if (pageWidth > panelWidth && pageWidth > 0) {
-          const scale = panelWidth / pageWidth;
+        const pageHeight = activePage.offsetHeight;
+        if (pageWidth > 0 && pageHeight > 0) {
+          const scaleX = panelWidth / pageWidth;
+          const scaleY = panelHeight / pageHeight;
+          const scale = Math.min(scaleX, scaleY, 1);
           activePage.style.zoom = scale;
         }
       });

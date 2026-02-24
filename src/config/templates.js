@@ -3,33 +3,36 @@
  * Used by both layout engine and renderer.
  */
 
-// Template name (Chinese) → CSS file ID mapping
-export const templateCSSMap = {
-  '四库全书': 'siku-quanshu',
-  '四庫全書': 'siku-quanshu',
-  'SiKuQuanShu': 'siku-quanshu',
-  'siku-quanshu': 'siku-quanshu',
-  '四库全书彩色': 'siku-quanshu-colored',
-  '四庫全書彩色': 'siku-quanshu-colored',
-  'SiKuQuanShu-colored': 'siku-quanshu-colored',
-  'siku-quanshu-colored': 'siku-quanshu-colored',
-  '红楼梦甲戌本': 'honglou',
-  '紅樓夢甲戌本': 'honglou',
-  'HongLou': 'honglou',
-  'honglou': 'honglou',
-  '极简': 'minimal',
-  '極簡': 'minimal',
-  'Minimal': 'minimal',
-  'minimal': 'minimal',
-  'default': 'siku-quanshu',
-};
+import { getSystemTemplate } from './template-configs.js';
 
-// Template CSS ID → grid config (must match CSS --wtc-n-rows / --wtc-n-cols)
-export const templateGridConfig = {
-  'siku-quanshu': { nRows: 21, nCols: 8 },
-  'siku-quanshu-colored': { nRows: 21, nCols: 8 },
-  'honglou': { nRows: 20, nCols: 9 },
-  'minimal': { nRows: 21, nCols: 8 },
+// Template name (Chinese/aliases) → Internal template ID mapping
+export const templateCSSMap = {
+  // === Guji series ===
+  '四库全书': 'guji-default',
+  '四庫全書': 'guji-default',
+  'SiKuQuanShu': 'guji-default',
+  'default': 'guji-default',
+  // CSS file name compatibility (old)
+  'siku-quanshu': 'guji-default',
+
+  '四库全书彩色': 'guji-colored',
+  '四庫全書彩色': 'guji-colored',
+  'SiKuQuanShu-colored': 'guji-colored',
+  // CSS file name compatibility (old)
+  'siku-quanshu-colored': 'guji-colored',
+
+  '红楼梦甲戌本': 'guji-honglou',
+  '紅樓夢甲戌本': 'guji-honglou',
+  'HongLouMengJiaXuBen': 'guji-honglou',
+  'HongLou': 'guji-honglou',
+  // CSS file name compatibility (old)
+  'honglou': 'guji-honglou',
+
+  // === Minimal (fallback to guji-default) ===
+  '极简': 'guji-default',
+  '極簡': 'guji-default',
+  'Minimal': 'guji-default',
+  'minimal': 'guji-default',
 };
 
 /**
@@ -37,7 +40,7 @@ export const templateGridConfig = {
  * Checks documentclass option first, then gujiSetup override.
  */
 export function resolveTemplateId(ast) {
-  let templateId = templateCSSMap[ast.template] || 'siku-quanshu';
+  let templateId = templateCSSMap[ast.template] || 'guji-default';
 
   for (const cmd of (ast.setupCommands || [])) {
     if (cmd.setupType === 'guji' && cmd.params?.template) {
@@ -51,7 +54,12 @@ export function resolveTemplateId(ast) {
 
 /**
  * Get grid config for a template ID.
+ * Dynamically derived from system template configuration.
  */
 export function getGridConfig(templateId) {
-  return templateGridConfig[templateId] || { nRows: 21, nCols: 8 };
+  const template = getSystemTemplate(templateId);
+  return {
+    nRows: template.content?.nCharPerCol || 21,
+    nCols: template.content?.nColumn || 8,
+  };
 }

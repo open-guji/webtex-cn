@@ -80,7 +80,7 @@ describe('HTMLRenderer', () => {
     const page = renderToPage('\\documentclass[四库全书]{ltc-guji}\\title{测试}\\begin{document}\\begin{正文}内容\\end{正文}\\end{document}');
     expect(page).toContain('<!DOCTYPE html>');
     expect(page).toContain('base.css');
-    expect(page).toContain('siku-quanshu');
+    expect(page).toContain('guji-default');
   });
 
   it('parses color formats correctly', () => {
@@ -146,13 +146,13 @@ describe('HTMLRenderer', () => {
   it('selects honglou template correctly', () => {
     const { ast } = parse('\\documentclass[红楼梦甲戌本]{ltc-guji}');
     const renderer = new HTMLRenderer(ast);
-    expect(renderer.templateId).toBe('honglou');
+    expect(renderer.templateId).toBe('guji-honglou');
   });
 
-  it('defaults to siku-quanshu template', () => {
+  it('defaults to guji-default template', () => {
     const { ast } = parse('\\documentclass{ltc-guji}');
     const renderer = new HTMLRenderer(ast);
-    expect(renderer.templateId).toBe('siku-quanshu');
+    expect(renderer.templateId).toBe('guji-default');
   });
 
   it('applies setup command overrides as CSS variables', () => {
@@ -206,7 +206,7 @@ describe('HTMLRenderer', () => {
   it('gujiSetup overrides template', () => {
     const { ast } = parse('\\documentclass[四库全书]{ltc-guji}\\gujiSetup{template=红楼梦甲戌本}');
     const renderer = new HTMLRenderer(ast);
-    expect(renderer.templateId).toBe('honglou');
+    expect(renderer.templateId).toBe('guji-honglou');
   });
 
   it('renders inline math', () => {
@@ -243,5 +243,91 @@ describe('HTMLRenderer', () => {
     // First page should be cover, then grid pages
     expect(pages[0]).toContain('wtc-spread-cover');
     expect(pages[1]).toContain('wtc-spread-right');
+  });
+
+  // Enhanced cover and title page features
+  describe('Enhanced cover features', () => {
+    it('renders cover with border decoration', () => {
+      const html = renderTex('\\begin{document}\\begin{封面}[边框=2pt solid, 边框颜色={139,69,19}]\\end{封面}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('wtc-spread-cover');
+      expect(html).toContain('border: 2pt solid');
+      expect(html).toContain('border-color: rgb(139, 69, 19)');
+    });
+
+    it('renders cover with padding', () => {
+      const html = renderTex('\\begin{document}\\begin{封面}[内边距=2cm]\\end{封面}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('padding: 2cm');
+    });
+
+    it('renders cover with background image', () => {
+      const html = renderTex('\\begin{document}\\begin{封面}[背景图片=bg.jpg, 背景尺寸=cover]\\end{封面}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('background-image: url(\'bg.jpg\')');
+      expect(html).toContain('background-size: cover');
+    });
+
+    it('renders cover with multiple style options', () => {
+      const html = renderTex('\\begin{document}\\begin{封面}[底色={244,241,225}, 边框=1px solid, 内边距=1cm]\\end{封面}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('background-color: rgb(244, 241, 225)');
+      expect(html).toContain('border: 1px solid');
+      expect(html).toContain('padding: 1cm');
+    });
+  });
+
+  describe('Enhanced title page features', () => {
+    it('renders title page with line gap', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}[行间距=20px]\\行{标题}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('wtc-spread-title-page');
+      expect(html).toContain('gap: 20px');
+    });
+
+    it('renders title page with background color', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}[底色={245,245,220}]\\行{标题}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('background-color: rgb(245, 245, 220)');
+    });
+
+    it('renders title page with padding', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}[内边距=3cm 2cm]\\行{标题}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('padding: 3cm 2cm');
+    });
+
+    it('renders line with letter spacing', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}\\行[字间距=0.2em]{标题文字}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('letter-spacing: 0.2em');
+      expect(html).toContain('标题文字');
+    });
+
+    it('renders line with font weight', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}\\行[字重=bold]{粗体标题}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('font-weight: bold');
+      expect(html).toContain('粗体标题');
+    });
+
+    it('renders line with custom color', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}\\行[颜色={139,0,0}]{红色标题}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('color: rgb(139, 0, 0)');
+      expect(html).toContain('红色标题');
+    });
+
+    it('renders line with decoration border', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}\\行[装饰线=双边]{装饰标题}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('wtc-line-decorated');
+      expect(html).toContain('border-left: 1px solid currentColor');
+      expect(html).toContain('border-right: 1px solid currentColor');
+      expect(html).toContain('装饰标题');
+    });
+
+    it('renders line with custom border', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}\\行[边框=2px dashed red]{有边框}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('border: 2px dashed red');
+      expect(html).toContain('有边框');
+    });
+
+    it('maintains backward compatibility with simple title page', () => {
+      const html = renderTex('\\begin{document}\\begin{书名页}\\行[font-size=48pt, align=center]{简单标题}\\end{书名页}\\begin{正文}天地\\end{正文}\\end{document}');
+      expect(html).toContain('wtc-spread-title-page');
+      expect(html).toContain('font-size: 48pt');
+      expect(html).toContain('justify-content: center');
+      expect(html).toContain('简单标题');
+    });
   });
 });

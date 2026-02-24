@@ -598,9 +598,9 @@ export const environmentRegistry = {
   },
   '书名页': {
     node: 'titlePage',
-    hasOptions: false,
+    hasOptions: true,
     category: 'structure',
-    description: 'Title page with vertical text lines',
+    description: 'Title page with vertical text lines (supports options: 行间距, 底色, 内边距)',
     status: 'full',
   },
   '書名頁': { alias: '书名页' },

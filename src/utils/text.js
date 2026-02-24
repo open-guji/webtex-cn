@@ -121,3 +121,41 @@ export function parseColor(colorStr) {
   }
   return colorStr;
 }
+
+/**
+ * Convert length unit to pt.
+ * LuaTeX-CN uses pt as the base unit (1pt ≈ 0.3528mm).
+ * Common conversions:
+ * - 1cm = 28.3465pt
+ * - 1mm = 2.83465pt
+ * - 1in = 72pt
+ */
+export function convertToPt(value) {
+  if (!value) return '0pt';
+  const str = String(value).trim();
+
+  // Already in pt
+  if (str.endsWith('pt')) return str;
+
+  // Extract number and unit
+  const match = str.match(/^([0-9.]+)([a-z]+)$/);
+  if (!match) return str; // Invalid format, return as-is
+
+  const num = parseFloat(match[1]);
+  const unit = match[2];
+
+  // Convert to pt
+  const conversions = {
+    'cm': 28.3465,
+    'mm': 2.83465,
+    'in': 72,
+    'px': 0.75,  // 1px = 0.75pt (CSS default)
+    'pt': 1,
+  };
+
+  const factor = conversions[unit];
+  if (factor === undefined) return str; // Unknown unit, return as-is
+
+  const ptValue = num * factor;
+  return `${ptValue.toFixed(2)}pt`;
+}
