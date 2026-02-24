@@ -149,10 +149,14 @@
 .wtc-content-border>.wtc-content {
   border: var(--wtc-border-thickness) solid var(--wtc-border-color);
   padding: var(--wtc-border-padding-top) 0 var(--wtc-border-padding-bottom) 0;
+  /* In vertical-rl: height = column height (from parent), width = number of columns */
   height: 100%;
-  /* In vertical-rl, width is the column height. Set to exact grid height to prevent auto-wrapping */
-  width: calc(var(--wtc-n-rows) * var(--wtc-grid-height));
-  min-width: 100%;
+  /* Set width to exact nCols to ensure:
+     1. All column grid lines (界栏) are rendered via background-image
+     2. Content flows right-to-left as expected in vertical-rl */
+  width: calc(var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height));
+  /* Align to the right using margin-left: auto */
+  margin-left: auto;
 }
 
 /* Digital mode: remove width constraint and overflow:hidden so text never auto-wraps.
@@ -179,7 +183,7 @@
   overflow: hidden;
   /* 乌丝栏: inner column border lines via background-size for reliable rendering */
   --wtc-col-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
-  background-origin: content-box;
+  background-origin: padding-box;
   background-image: repeating-linear-gradient(to left,
       transparent 0,
       transparent calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
