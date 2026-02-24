@@ -77,6 +77,12 @@ export function resolveConfig(ast) {
   // Collect CSS variable overrides
   const cssOverrides = {};
   for (const cmd of setupCommands) {
+    // Handle setmainfont (font setup)
+    if (cmd.setupType === 'font' && cmd.params?.fontFamily) {
+      cssOverrides['--wtc-font-family'] = cmd.params.fontFamily;
+      continue;
+    }
+
     const mapping = setupParamMap[cmd.setupType];
     if (!mapping || !cmd.params) continue;
     for (const [param, value] of Object.entries(cmd.params)) {

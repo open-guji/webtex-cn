@@ -281,7 +281,13 @@ export class Parser {
     // Setup commands
     if (def.node === 'setupCmd') {
       const { optionalArg, requiredArgs } = this.parseCommandArgs(def);
-      const params = parseKeyValue(requiredArgs[0] || optionalArg || '');
+      // Special handling for setmainfont: use font name directly
+      let params;
+      if (def.setupType === 'font') {
+        params = { fontFamily: requiredArgs[0] || '' };
+      } else {
+        params = parseKeyValue(requiredArgs[0] || optionalArg || '');
+      }
       const setupNode = createNode(NodeType.SETUP, {
         setupType: def.setupType,
         params,

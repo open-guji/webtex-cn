@@ -106,6 +106,20 @@ describe('Parser', () => {
     expect(ast.setupCommands[0].params['n-column']).toBe('8');
   });
 
+  it('parses setmainfont command', () => {
+    const { ast } = parse('\\setmainfont{TW-Kai}');
+    expect(ast.setupCommands.length).toBe(1);
+    expect(ast.setupCommands[0].setupType).toBe('font');
+    expect(ast.setupCommands[0].params.fontFamily).toBe('TW-Kai');
+  });
+
+  it('parses Chinese setmainfont variants', () => {
+    const { ast } = parse('\\设置字体{SimSun}');
+    expect(ast.setupCommands.length).toBe(1);
+    expect(ast.setupCommands[0].setupType).toBe('font');
+    expect(ast.setupCommands[0].params.fontFamily).toBe('SimSun');
+  });
+
   it('handles unknown commands gracefully', () => {
     const { ast } = parse('\\begin{document}\\unknownCmd{content}rest\\end{document}');
     const body = ast.children[0];

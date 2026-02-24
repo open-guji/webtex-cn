@@ -43,8 +43,8 @@ TeX 源码 → [解析] → AST 节点 → [布局] → LayoutItem → [渲染] 
 | `annotation` | 批注类：夹注系列、侧批、眉批、批注 |
 | `decoration` | 装饰类：圈点、专名号、书名号、反白、八角框等 |
 | `layout` | 布局控制：空格、换行、抬头系列、文本框、印章 |
-| `setup` | 配置命令：各种 Setup、句读模式切换 |
-| `ignored` | 忽略命令：usepackage、setmainfont 等无 Web 对应物 |
+| `setup` | 配置命令：各种 Setup、setmainfont、句读模式切换 |
+| `ignored` | 忽略命令：usepackage、pagestyle 等无 Web 对应物 |
 
 ### 1.4 实现状态统计
 
@@ -451,6 +451,7 @@ TeX 源码 → [解析] → AST 节点 → [布局] → LayoutItem → [渲染] 
 | `\contentSetup{...}` | `content` | `内容设置`, `內容設置` | `--wtc-font-*`, `--wtc-border-*`, `--wtc-line-height`, `--wtc-letter-spacing` |
 | `\pageSetup{...}` | `page` | `页面设置`, `頁面設置` | `--wtc-page-*`, `--wtc-margin-*` |
 | `\banxinSetup{...}` | `banxin` | `版心设置`, `版心設置` | `--wtc-banxin-*` |
+| `\setmainfont{字体名}` | `font` | `设置字体`, `設置字體` | `--wtc-font-family` |
 
 ### 7.2 批注类配置
 
@@ -497,7 +498,6 @@ TeX 源码 → [解析] → AST 节点 → [布局] → LayoutItem → [渲染] 
 | 命令 | 参数 | 说明 |
 |------|------|------|
 | `\usepackage` / `\RequirePackage` | `['optional', 'required']` | TeX 包加载，Web 不需要 |
-| `\setmainfont` / `设置字体` / `設置字體` | `['optional', 'required']` | 字体设置，CSS 控制 |
 | `\pagestyle` | `['required']` | PDF 页面样式 |
 | `\noindent` | `[]` | CSS 控制缩进 |
 | `\par` | `[]` | 段落通过 HTML 结构表达 |

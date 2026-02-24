@@ -8,6 +8,14 @@
             "url": "http://localhost:3001/index.html",
             "webRoot": "${workspaceFolder}/examples",
             "preLaunchTask": "Start Dev Server"
+        },
+        {
+            "name": "Siku Mulu Comparison",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3001/index.html?file=siku-mulu.tex&template=siku-quanshu-colored",
+            "webRoot": "${workspaceFolder}/examples",
+            "preLaunchTask": "Start Dev Server"
         }
     ]
 }

@@ -386,6 +386,16 @@
       if (!isNaN(p) && p > 0) {
         currentPage = p;
       }
+      const f = params.get('file');
+      if (f) {
+        texSelect.value = f;
+      }
+      const t = params.get('template');
+      if (t) {
+        templateSelect.value = t;
+        const link = document.getElementById('template-css');
+        link.href = '../src/templates/' + t + '.css';
+      }
     }
 
     function debouncedRender() {
@@ -441,7 +451,9 @@
     texSource.addEventListener('input', debouncedRender);
     texSelect.addEventListener('change', function () {
       currentPage = 1;
-      loadTeX(texSelect.value);
+      loadTeX(texSelect.value).then(() => {
+        detectPDF(texSelect.value);
+      });
     });
     templateSelect.addEventListener('change', function () { switchTemplate(templateSelect.value); });
 
@@ -459,12 +471,20 @@
     });
 
     // PDF detection and loading
-    async function detectPDF() {
+    const exampleRefs = {
+      'siku-mulu.tex': 'siku-mulu/'
+    };
+
+    async function detectPDF(filename) {
+      pdfAvailable = false;
+      pdfTotalPages = 0;
+      pdfBasePath = exampleRefs[filename] || '../output/compare/pdf-pages/';
+
       try {
         // Count available PDF pages (try up to 100)
         for (let i = 1; i <= 100; i++) {
           const pageNum = String(i).padStart(2, '0');
-          const pageResp = await fetch(`../output/compare/pdf-pages/page-${pageNum}.png`, { method: 'HEAD' });
+          const pageResp = await fetch(`${pdfBasePath}page-${pageNum}.png`, { method: 'HEAD' });
           if (pageResp.ok) {
             pdfTotalPages = i;
           } else {
@@ -476,12 +496,14 @@
           pdfPanel.classList.remove('hidden');
           workspace.classList.remove('two-column');
           pdfPageTotal.textContent = pdfTotalPages;
+          updatePDFPage(currentPage);
           return true;
         }
       } catch (e) {
         console.log('PDF detection failed:', e);
       }
       // No PDF available, use two-column mode
+      pdfPanel.classList.add('hidden');
       workspace.classList.add('two-column');
       return false;
     }
@@ -493,13 +515,13 @@
       pdfCurrentPage = page;
 
       const pageNum = String(page).padStart(2, '0');
-      pdfImage.src = `../output/compare/pdf-pages/page-${pageNum}.png`;
+      pdfImage.src = `${pdfBasePath}page-${pageNum}.png`;
       pdfPageInput.value = page;
       pdfBtnPrev.disabled = page <= 1;
       pdfBtnNext.disabled = page >= pdfTotalPages;
 
-      // Sync WebTeX page
-      if (currentPage !== page) {
+      // Sync WebTeX page if needed
+      if (currentPage !== page && page <= totalPages) {
         updatePager(page);
       }
     }
@@ -520,9 +542,9 @@
 
     // Sync PDF when WebTeX page changes
     const originalUpdatePager = updatePager;
-    updatePager = function(page) {
+    updatePager = function (page) {
       originalUpdatePager(page);
-      if (pdfAvailable && pdfCurrentPage !== currentPage) {
+      if (pdfAvailable && pdfCurrentPage !== currentPage && currentPage <= pdfTotalPages) {
         updatePDFPage(currentPage);
       }
     };
@@ -532,13 +554,17 @@
 
     // Initialization
     initFromUrl();
-    const defaultFile = 'siku-mulu.tex';
-    texSelect.value = defaultFile;
+    const startFile = texSelect.value;
+    const startTemplate = templateSelect.value;
 
-    // Detect PDF first, then load TeX
-    detectPDF().then(() => {
-      loadTeX(defaultFile).then(() => {
-        // If URL has page param and PDF available, sync PDF
+    // Switch template if specified in URL
+    if (startTemplate !== 'siku-quanshu') {
+      switchTemplate(startTemplate);
+    }
+
+    // Load TeX and detect PDF
+    loadTeX(startFile).then(() => {
+      detectPDF(startFile).then(() => {
         if (pdfAvailable && currentPage > 1) {
           updatePDFPage(currentPage);
         }

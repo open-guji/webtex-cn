@@ -277,8 +277,8 @@ export function resolveCommand(name) {
 | annotation | 16 | 夹注/按/注/標, 侧批, 眉批, 批注 (含别名) |
 | decoration | 14 | 圈点, 专名号, 书名号, 反白, 八角框, 带圈, 改, 装饰 |
 | layout | 17 | 空格, 换行, 抬头/平抬/单抬/双抬/三抬, 挪抬/空抬, 设置缩进, 相对抬头, 文本框, 印章 |
-| setup | 19 | contentSetup, pageSetup, banxinSetup, gujiSetup, 句读模式等 |
-| ignored | 12 | usepackage, setmainfont, pagestyle, noindent, par 等 |
+| setup | 20 | contentSetup, pageSetup, banxinSetup, gujiSetup, setmainfont, 句读模式等 |
+| ignored | 11 | usepackage, pagestyle, noindent, par 等 |
 
 ### 4.4 环境注册表
 

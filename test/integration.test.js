@@ -162,6 +162,34 @@ describe('Integration: full TeX to HTML pipeline', () => {
     expect(html).toContain('--wtc-jiazhu-color: blue');
   });
 
+  it('setmainfont sets CSS font-family variable', () => {
+    const tex = `
+\\documentclass{ltc-guji}
+\\setmainfont{TW-Kai}
+\\begin{document}
+\\begin{正文}
+天地玄黄
+\\end{正文}
+\\end{document}
+`;
+    const html = renderToHTML(tex);
+    expect(html).toContain('--wtc-font-family: TW-Kai');
+  });
+
+  it('setmainfont Chinese variant works', () => {
+    const tex = `
+\\documentclass{ltc-guji}
+\\设置字体{SimSun}
+\\begin{document}
+\\begin{正文}
+宇宙洪荒
+\\end{正文}
+\\end{document}
+`;
+    const html = renderToHTML(tex);
+    expect(html).toContain('--wtc-font-family: SimSun');
+  });
+
   it('renderToPage includes data-template attribute', () => {
     const page = renderToPage('\\documentclass[红楼梦甲戌本]{ltc-guji}\\begin{document}\\begin{正文}text\\end{正文}\\end{document}');
     expect(page).toContain('data-template="honglou"');
