@@ -63,7 +63,7 @@
     }
 
     .editor-panel {
-      width: 38%;
+      width: 33.33%;
       min-width: 280px;
       display: flex;
       flex-direction: column;
@@ -89,15 +89,55 @@
     }
 
     .preview-panel {
-      flex: 1;
+      width: 33.33%;
       overflow: hidden;
-      /* Changed from auto to hidden for paging */
       padding: 20px;
       background: #e8e8e8;
       display: flex;
       flex-direction: column;
       align-items: center;
       position: relative;
+      border-right: 1px solid #ccc;
+    }
+
+    .pdf-panel {
+      width: 33.33%;
+      overflow: hidden;
+      padding: 20px;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .pdf-panel.hidden {
+      display: none;
+    }
+
+    /* Two-column mode when no PDF */
+    .workspace.two-column .editor-panel {
+      width: 38%;
+    }
+
+    .workspace.two-column .preview-panel {
+      flex: 1;
+      border-right: none;
+    }
+
+    .pdf-container {
+      flex: 1;
+      overflow: auto;
+      width: 100%;
+      text-align: center;
+    }
+
+    .pdf-container img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     #webtex-container {
@@ -197,7 +237,7 @@
     </label>
   </div>
 
-  <div class="workspace">
+  <div class="workspace" id="workspace">
     <div class="editor-panel">
       <textarea id="tex-source" spellcheck="false" placeholder="在此输入 TeX 源文件..."></textarea>
     </div>
@@ -209,6 +249,18 @@
           第 <input type="text" id="page-input" value="1"> / <span id="page-total">1</span> 页
         </div>
         <button id="btn-next">下一页</button>
+      </div>
+    </div>
+    <div class="pdf-panel hidden" id="pdf-panel">
+      <div class="pdf-container" id="pdf-container">
+        <img id="pdf-image" src="" alt="PDF Reference">
+      </div>
+      <div class="pager-bar">
+        <button id="pdf-btn-prev">上一页</button>
+        <div class="pager-info">
+          第 <input type="text" id="pdf-page-input" value="1"> / <span id="pdf-page-total">1</span> 页
+        </div>
+        <button id="pdf-btn-next">下一页</button>
       </div>
     </div>
   </div>
@@ -224,17 +276,31 @@
     const status = document.getElementById('status');
     const texSelect = document.getElementById('tex-select');
     const templateSelect = document.getElementById('template-select');
+    const workspace = document.getElementById('workspace');
 
-    // Pager elements
+    // WebTeX pager elements
     const btnPrev = document.getElementById('btn-prev');
     const btnNext = document.getElementById('btn-next');
     const pageInput = document.getElementById('page-input');
     const pageTotal = document.getElementById('page-total');
 
+    // PDF panel elements
+    const pdfPanel = document.getElementById('pdf-panel');
+    const pdfContainer = document.getElementById('pdf-container');
+    const pdfImage = document.getElementById('pdf-image');
+    const pdfBtnPrev = document.getElementById('pdf-btn-prev');
+    const pdfBtnNext = document.getElementById('pdf-btn-next');
+    const pdfPageInput = document.getElementById('pdf-page-input');
+    const pdfPageTotal = document.getElementById('pdf-page-total');
+
     let renderTimer = null;
     let currentPage = 1;
     let totalPages = 1;
     let currentCfgSource = null; // Loaded .cfg source for macro expansion
+    let pdfAvailable = false;
+    let pdfTotalPages = 0;
+    let pdfCurrentPage = 1;
+    let pdfBasePath = '';
 
     /**
      * Extract template name from \documentclass[templateName]{...}
@@ -355,9 +421,11 @@
           status.textContent = '已加载模板配置，渲染中...';
         }
         renderPreview(currentPage > 1); // Maintain page if we came from URL
+        return Promise.resolve();
       } catch (err) {
         status.textContent = '错误: ' + err.message;
         console.error(err);
+        return Promise.reject(err);
       }
     }
 
@@ -390,6 +458,75 @@
       }
     });
 
+    // PDF detection and loading
+    async function detectPDF() {
+      try {
+        // Count available PDF pages (try up to 100)
+        for (let i = 1; i <= 100; i++) {
+          const pageNum = String(i).padStart(2, '0');
+          const pageResp = await fetch(`../output/compare/pdf-pages/page-${pageNum}.png`, { method: 'HEAD' });
+          if (pageResp.ok) {
+            pdfTotalPages = i;
+          } else {
+            break;
+          }
+        }
+        if (pdfTotalPages > 0) {
+          pdfAvailable = true;
+          pdfPanel.classList.remove('hidden');
+          workspace.classList.remove('two-column');
+          pdfPageTotal.textContent = pdfTotalPages;
+          return true;
+        }
+      } catch (e) {
+        console.log('PDF detection failed:', e);
+      }
+      // No PDF available, use two-column mode
+      workspace.classList.add('two-column');
+      return false;
+    }
+
+    function updatePDFPage(page) {
+      if (!pdfAvailable) return;
+      if (page < 1) page = 1;
+      if (page > pdfTotalPages) page = pdfTotalPages;
+      pdfCurrentPage = page;
+
+      const pageNum = String(page).padStart(2, '0');
+      pdfImage.src = `../output/compare/pdf-pages/page-${pageNum}.png`;
+      pdfPageInput.value = page;
+      pdfBtnPrev.disabled = page <= 1;
+      pdfBtnNext.disabled = page >= pdfTotalPages;
+
+      // Sync WebTeX page
+      if (currentPage !== page) {
+        updatePager(page);
+      }
+    }
+
+    // PDF pager event listeners
+    pdfBtnPrev.addEventListener('click', () => updatePDFPage(pdfCurrentPage - 1));
+    pdfBtnNext.addEventListener('click', () => updatePDFPage(pdfCurrentPage + 1));
+    pdfPageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const p = parseInt(pdfPageInput.value, 10);
+        if (!isNaN(p) && p >= 1 && p <= pdfTotalPages) {
+          updatePDFPage(p);
+        } else {
+          pdfPageInput.value = pdfCurrentPage;
+        }
+      }
+    });
+
+    // Sync PDF when WebTeX page changes
+    const originalUpdatePager = updatePager;
+    updatePager = function(page) {
+      originalUpdatePager(page);
+      if (pdfAvailable && pdfCurrentPage !== currentPage) {
+        updatePDFPage(currentPage);
+      }
+    };
+
     // Re-scale on resize
     new ResizeObserver(function () { updateScale(); }).observe(previewPanel);
 
@@ -397,7 +534,16 @@
     initFromUrl();
     const defaultFile = 'sikuanmulu.tex';
     texSelect.value = defaultFile;
-    loadTeX(defaultFile);
+
+    // Detect PDF first, then load TeX
+    detectPDF().then(() => {
+      loadTeX(defaultFile).then(() => {
+        // If URL has page param and PDF available, sync PDF
+        if (pdfAvailable && currentPage > 1) {
+          updatePDFPage(currentPage);
+        }
+      });
+    });
   </script>
 </body>
 
