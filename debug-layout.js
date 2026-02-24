@@ -10,7 +10,7 @@ async function debugLayout() {
   const { parse } = await import(join(srcDir, 'parser', 'index.js'));
   const { layout } = await import(join(srcDir, 'layout', 'grid-layout.js'));
 
-  const texPath = resolve('examples/sikuanmulu.tex');
+  const texPath = resolve('examples/siku-mulu.tex');
   const cfgPath = resolve('examples/四库全书文渊阁简明目录.cfg');
 
   const texSource = readFileSync(texPath, 'utf8');
@@ -68,13 +68,23 @@ async function debugLayout() {
       });
     } else {
       // Show first 20 items
-      console.log('\nRight half items (first 10):');
-      for (let j = 0; j < Math.min(10, page.halfBoundary); j++) {
+      console.log('\nRight half items (all):');
+      for (let j = 0; j < page.halfBoundary; j++) {
         const item = page.items[j];
-        const text = typeof item.text === 'string'
-          ? item.text.substring(0, 20)
-          : String(item.text || '').substring(0, 20);
-        console.log(`  [${j}] col=${item.col} row=${item.row} indent=${item.indent} type=${item.type} text="${text}"`);
+        let text = item.node?.value || item.node?.text || '';
+        if (item.node?.children) {
+          text = item.node.children.map(c => c.text || c.value || '').join('').substring(0, 25);
+        }
+        console.log(`  [${j}] col=${item.col} row=${item.row} indent=${item.indent} type=${item.node?.type} text="${text}"`);
+      }
+      console.log(`\nLeft half items (first 10):`);
+      for (let j = page.halfBoundary; j < Math.min(page.halfBoundary + 10, page.items.length); j++) {
+        const item = page.items[j];
+        let text = item.node?.value || item.node?.text || '';
+        if (item.node?.children) {
+          text = item.node.children.map(c => c.text || c.value || '').join('').substring(0, 25);
+        }
+        console.log(`  [${j}] col=${item.col} row=${item.row} indent=${item.indent} type=${item.node?.type} text="${text}"`);
       }
     }
   }

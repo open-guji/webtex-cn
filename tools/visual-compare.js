@@ -5,7 +5,7 @@
  * Converts both outputs to page images and generates a side-by-side HTML report.
  *
  * Usage:
- *   node tools/visual-compare.js --tex examples/sikuanmulu.tex \
+ *   node tools/visual-compare.js --tex examples/siku-mulu.tex \
  *     --pdf /path/to/column1.pdf
  *
  * Options:

@@ -256,11 +256,6 @@ export class GridLayoutEngine {
         // When currentRow === 0 (e.g. after a block element like MULU_ITEM,
         // or after natural column wrap), the column is already fresh.
         if (this.currentRow > 0) {
-          // In digital mode, if currentRow exceeds bounds (text overflow),
-          // reset to 0 before placing marker to avoid out-of-bounds items
-          if (this.isDigitalMode && this.currentRow >= this.effectiveRows) {
-            this.currentRow = 0;
-          }
           this.placeMarker(LayoutMarker.COLUMN_BREAK);
           this.advanceColumn();
         }
