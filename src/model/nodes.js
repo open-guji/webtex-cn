@@ -49,6 +49,7 @@ export const NodeType = {
   DIGITAL_CONTENT: 'digitalContent',
   BLANK_PAGE: 'blankPage',
   STYLE: 'style',
+  JIAZHU_COL: 'jiazhuCol',
   UNKNOWN: 'unknown',
 };
 

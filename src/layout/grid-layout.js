@@ -625,6 +625,36 @@ export class GridLayoutEngine {
    * Each segment is placed as a separate item so page breaks work correctly.
    */
   walkJiazhu(node) {
+    // Check for explicit column layout: \双列{\右小列{...}\左小列{...}}
+    const hasExplicitCols = node.children.some(c => c.type === NodeType.JIAZHU_COL);
+    if (hasExplicitCols) {
+      const colCharCount = (children) => {
+        let count = 0;
+        for (const c of children) {
+          if (c.type === NodeType.SET_INDENT) {
+            count += Math.max(0, parseInt(c.value, 10) || 0);
+          } else if (c.type === NodeType.TEXT) {
+            count += [...(c.value || '')].length;
+          } else if (c.children) {
+            count += [...getPlainText(c.children)].length;
+          }
+        }
+        return count;
+      };
+      let rightCount = 0;
+      let leftCount = 0;
+      for (const child of node.children) {
+        if (child.type === NodeType.JIAZHU_COL) {
+          if (child.value === 'right') rightCount = colCharCount(child.children);
+          else leftCount = colCharCount(child.children);
+        }
+      }
+      const rows = Math.max(rightCount, leftCount);
+      this.placeItem(node);
+      this.advanceRows(rows);
+      return;
+    }
+
     const hasComplexChildren = node.children.some(c => c.type !== NodeType.TEXT);
     const autoBalance = (node.options?.['auto-balance'] ?? node.options?.['自动均衡']) !== 'false';
     const align = node.options?.align || 'outward';

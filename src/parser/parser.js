@@ -339,6 +339,11 @@ export class Parser {
       node.src = requiredArgs[0] || '';
     }
 
+    // Jiazhu column: store column side (right/left)
+    if (def.node === 'jiazhuCol') {
+      node.value = name === '右小列' ? 'right' : 'left';
+    }
+
     return node;
   }
 
@@ -480,6 +485,7 @@ export class Parser {
       'digitalContent': NodeType.DIGITAL_CONTENT,
       'blankPage': NodeType.BLANK_PAGE,
       'style': NodeType.STYLE,
+      'jiazhuCol': NodeType.JIAZHU_COL,
     };
     return map[nodeName] || NodeType.UNKNOWN;
   }

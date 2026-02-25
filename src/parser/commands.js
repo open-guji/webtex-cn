@@ -261,16 +261,16 @@ export const commandRegistry = {
   '双列': { alias: '夹注' },
   '雙列': { alias: '夹注' },
   '右小列': {
-    args: ['optional', 'required'], node: 'text', // treating as text wrapper for now
+    args: ['optional', 'required'], node: 'jiazhuCol',
     category: 'layout',
-    description: 'Right column content (jiazhu internal, legacy)',
-    status: 'partial',
+    description: 'Right column content in explicit double-column layout',
+    status: 'full',
   },
   '左小列': {
-    args: ['optional', 'required'], node: 'text',
+    args: ['optional', 'required'], node: 'jiazhuCol',
     category: 'layout',
-    description: 'Left column content (jiazhu internal, legacy)',
-    status: 'partial',
+    description: 'Left column content in explicit double-column layout',
+    status: 'full',
   },
   'BanxinUpper': {
     args: ['required'], node: 'banxinUpper',

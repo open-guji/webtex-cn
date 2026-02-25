@@ -565,6 +565,12 @@ ${linesHTML.join('\n')}
   }
 
   renderJiazhu(node) {
+    // Check for explicit column layout: \双列{\右小列{...}\左小列{...}}
+    const hasExplicitCols = node.children.some(c => c.type === NodeType.JIAZHU_COL);
+    if (hasExplicitCols) {
+      return this.renderJiazhuExplicitCols(node);
+    }
+
     const hasComplexChildren = node.children.some(c => c.type !== NodeType.TEXT);
 
     if (hasComplexChildren) {
@@ -646,6 +652,68 @@ ${linesHTML.join('\n')}
     const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
 
     // Add inline styles for font-size and other options
+    const opts = node.options || {};
+    const styles = [];
+    if (opts['font-size']) styles.push(`font-size: ${opts['font-size']}`);
+    if (opts['color']) styles.push(`color: ${this.parseColor(opts['color'])}`);
+    const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+
+    return `<span class="wtc-jiazhu${alignClass}"${styleAttr}><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
+  }
+
+  /**
+   * Render jiazhu with explicit \右小列 / \左小列 columns.
+   * Content is placed exactly as specified without auto-splitting.
+   */
+  renderJiazhuExplicitCols(node) {
+    let rightChildren = [];
+    let leftChildren = [];
+    for (const child of node.children) {
+      if (child.type === NodeType.JIAZHU_COL) {
+        if (child.value === 'right') rightChildren = child.children;
+        else leftChildren = child.children;
+      }
+    }
+
+    const renderColChildren = (children) => {
+      return children.map(c => {
+        if (c.type === NodeType.SET_INDENT) {
+          const n = parseInt(c.value, 10) || 0;
+          let spacer = '';
+          if (n > 0) {
+            spacer = `<span class="wtc-indent-spacer" style="--wtc-indent-size: calc(${n} * var(--wtc-grid-height))"></span>`;
+          } else if (n < 0) {
+            // Negative indent (taitou): use margin-inline-start to pull content up in vertical-rl
+            spacer = `<span class="wtc-indent-spacer" style="margin-inline-start: calc(${n} * var(--wtc-grid-height))"></span>`;
+          }
+          return `${spacer}<span class="wtc-set-indent" data-indent="${n}"></span>`;
+        }
+        return this.renderNode(c);
+      }).join('');
+    };
+
+    const col1HTML = renderColChildren(rightChildren);
+    const col2HTML = renderColChildren(leftChildren);
+
+    const colCharCount = (children) => {
+      let count = 0;
+      for (const c of children) {
+        if (c.type === NodeType.SET_INDENT) {
+          count += Math.max(0, parseInt(c.value, 10) || 0);
+        } else if (c.type === NodeType.TEXT) {
+          count += [...(c.value || '')].length;
+        } else if (c.children) {
+          count += [...getPlainText(c.children)].length;
+        }
+      }
+      return count;
+    };
+    const rows = Math.max(colCharCount(rightChildren), colCharCount(leftChildren));
+    this.colPos += rows;
+
+    const align = node.options?.align || 'outward';
+    const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
+
     const opts = node.options || {};
     const styles = [];
     if (opts['font-size']) styles.push(`font-size: ${opts['font-size']}`);

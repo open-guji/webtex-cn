@@ -200,19 +200,23 @@ async function serveCommand(inputPath, port, pdfRefPath = null) {
   const templatesDir = join(srcDir, 'templates');
 
   const server = createServer((req, res) => {
-    let url = req.url === '/' ? '/index.html' : req.url;
+    const urlObj = new URL(req.url, `http://localhost:${port}`);
+    const pathname = urlObj.pathname;
+    const search = urlObj.search;
+
+    // Normalize: any directory path (ending with /) should serve index.html
+    const isIndexRequest = pathname === '/' || pathname.endsWith('/');
 
     // If we have PDF pages and no page param, redirect to ?page=1
-    if (pdfPagesDir && (url === '/index.html' || url === '/')) {
-      res.writeHead(302, { 'Location': '/?page=1' });
+    if (pdfPagesDir && isIndexRequest && !urlObj.searchParams.has('page')) {
+      const redirectPath = pathname === '/' ? '/?page=1' : `${pathname}?page=1`;
+      res.writeHead(302, { 'Location': redirectPath });
       res.end();
       return;
     }
 
-    if (url === '/') url = '/index.html';
-
-    // Serve generated HTML
-    if (url === '/index.html' || url.startsWith('/index.html?') || url.startsWith('/?')) {
+    // Serve generated HTML for any index request (with or without query params)
+    if (isIndexRequest) {
       const texSource = readFileSync(resolve(inputPath), 'utf8');
       const cfgSource = loadCfgSource(texSource, inputPath, extractTemplateName);
       const { ast } = parse(texSource, cfgSource ? { cfgSource } : {});
@@ -222,8 +226,7 @@ async function serveCommand(inputPath, port, pdfRefPath = null) {
       const setupStyles = cssOverridesToStyleAttr(layoutResult.config.cssOverrides);
       const pageHTMLs = renderer.renderFromLayout(layoutResult);
 
-      // Parse page parameter
-      const urlObj = new URL(url, `http://localhost:${port}`);
+      // Parse page parameter (urlObj already created above)
       const requestedPage = parseInt(urlObj.searchParams.get('page') || '1', 10);
       const pageIndex = requestedPage - 1;
 
@@ -324,8 +327,8 @@ ${pagesContent}
     }
 
     // Serve PDF page images
-    if (pdfPagesDir && url.startsWith('/pdf-page/')) {
-      const filename = url.replace('/pdf-page/', '');
+    if (pdfPagesDir && pathname.startsWith('/pdf-page/')) {
+      const filename = pathname.replace('/pdf-page/', '');
       const imgPath = join(pdfPagesDir, filename);
       if (existsSync(imgPath)) {
         const img = readFileSync(imgPath);
@@ -336,8 +339,8 @@ ${pagesContent}
     }
 
     // Serve CSS files
-    const cssPath = join(templatesDir, url.replace(/^\//, ''));
-    if (existsSync(cssPath) && url.endsWith('.css')) {
+    const cssPath = join(templatesDir, pathname.replace(/^\//, ''));
+    if (existsSync(cssPath) && pathname.endsWith('.css')) {
       const css = readFileSync(cssPath, 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/css' });
       res.end(css);
