@@ -193,9 +193,18 @@ describe('HTMLRenderer', () => {
     const tex = '\\begin{document}\\begin{正文}\\夹注[align=inward]{七个字的文本串}\\end{正文}\\end{document}';
     const html = renderTex(tex);
     expect(html).toContain('wtc-jiazhu');
+    expect(html).toContain('wtc-jiazhu-inward');
     // inward: floor(7/2) = 3 chars in col1, 4 chars in col2
     expect(html).toContain('七个字');
     expect(html).toContain('的文本串');
+  });
+
+  it('renders jiazhu with center alignment', () => {
+    const tex = '\\begin{document}\\begin{正文}\\夹注[align=center]{四个字符}\\end{正文}\\end{document}';
+    const html = renderTex(tex);
+    expect(html).toContain('wtc-jiazhu-center');
+    expect(html).toContain('四个');
+    expect(html).toContain('字符');
   });
 
   it('renders textbox with border option', () => {

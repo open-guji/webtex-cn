@@ -344,6 +344,14 @@
   width: calc(var(--wtc-grid-width) / 2);
 }
 
+/* Center-aligned jiazhu: vertically center each column content */
+.wtc-jiazhu-center .wtc-jiazhu-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
 /* Flow mode: for jiazhu with nested commands */
 .wtc-jiazhu-flow {
   display: inline-flex;

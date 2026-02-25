@@ -210,7 +210,8 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
    */
   renderLayoutItem(item) {
     if (item.jiazhuComplexSegment && item.node.type === NodeType.JIAZHU) {
-      return this.renderJiazhuComplexSegment(item.jiazhuComplexSegment, item.autoBalance, item.jiazhuComplexMaxPerCol);
+      const align = item.node.options?.align || 'outward';
+      return this.renderJiazhuComplexSegment(item.jiazhuComplexSegment, item.autoBalance, item.jiazhuComplexMaxPerCol, align);
     }
     if (item.jiazhuSegments && item.node.type === NodeType.JIAZHU) {
       return this.renderJiazhuFromSegments(item.node, item.jiazhuSegments);
@@ -242,8 +243,12 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       return this.renderJiazhuComplex(node);
     }
 
+    // Add align class if specified
+    const align = node.options?.align || 'outward';
+    const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
+
     return segments.map(({ col1, col2 }) =>
-      `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
+      `<span class="wtc-jiazhu${alignClass}"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
     ).join('');
   }
 
@@ -575,8 +580,11 @@ ${linesHTML.join('\n')}
       this.colPos = Math.max(lastSeg.col1.length, lastSeg.col2.length);
     }
 
+    // Add align class if specified
+    const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
+
     return segments.map(({ col1, col2 }) =>
-      `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
+      `<span class="wtc-jiazhu${alignClass}"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
     ).join('');
   }
 
@@ -617,14 +625,19 @@ ${linesHTML.join('\n')}
     const { before, after } = splitChildrenAtCharCount(node.children, mid);
     const col1HTML = before.map(renderChild).join('');
     const col2HTML = after.map(renderChild).join('');
-    return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
+
+    // Add align class if specified
+    const align = node.options?.align || 'outward';
+    const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
+
+    return `<span class="wtc-jiazhu${alignClass}"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 
   /**
    * Render a complex jiazhu segment (from layout walkJiazhuComplex).
    * Each segment is a slice of children between taitou boundaries.
    */
-  renderJiazhuComplexSegment(children, autoBalance = true, segMaxPerCol) {
+  renderJiazhuComplexSegment(children, autoBalance = true, segMaxPerCol, align = 'outward') {
     const renderChild = (c) => {
       if (c.type === NodeType.TEXT && this.punctMode === 'judou') {
         const richChars = getJudouRichText(c.value || '', 'judou');
@@ -649,7 +662,11 @@ ${linesHTML.join('\n')}
     const { before, after } = splitChildrenAtCharCount(children, mid);
     const col1HTML = before.map(renderChild).join('');
     const col2HTML = after.map(renderChild).join('');
-    return `<span class="wtc-jiazhu"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
+
+    // Add align class if specified
+    const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
+
+    return `<span class="wtc-jiazhu${alignClass}"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 
   renderSidenote(node) {
