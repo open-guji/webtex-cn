@@ -15,7 +15,8 @@
 
   /* Page dimensions (optional, for explicit sizing; leave unset for auto-calc) */
 
-  /* Grid (derived from font-size × line-height) */
+  /* Grid dimensions (auto-calculated from page dimensions via gujiAutoLayout;
+     fallback to font-based calculation for standalone use) */
   --wtc-grid-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
   --wtc-grid-height: calc(var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio)));
 
@@ -88,10 +89,10 @@
   --wtc-proper-name-color: #333;
   --wtc-book-title-color: #333;
 
-  /* Half-page width: one set of columns + banxin + margins */
-  --wtc-half-content-width: calc(var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness));
+  /* Half-page width: one set of columns + borders */
+  --wtc-half-content-width: calc(var(--wtc-n-cols) * var(--wtc-grid-width) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness));
   --wtc-page-width: calc(var(--wtc-margin-left) + var(--wtc-margin-right) + var(--wtc-banxin-width) + var(--wtc-half-content-width));
-  --wtc-page-height: calc(var(--wtc-n-rows) * var(--wtc-font-size) * (1 + var(--wtc-letter-spacing-ratio)) + var(--wtc-margin-top) + var(--wtc-margin-bottom) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + var(--wtc-border-padding-top) + var(--wtc-border-padding-bottom));
+  --wtc-page-height: calc(var(--wtc-n-rows) * var(--wtc-grid-height) + var(--wtc-margin-top) + var(--wtc-margin-bottom) + 2 * var(--wtc-outer-border-thickness) + 2 * var(--wtc-outer-border-sep) + 2 * var(--wtc-border-thickness) + var(--wtc-border-padding-top) + var(--wtc-border-padding-bottom));
 }
 
 /* ---- Reset ---- */
@@ -115,9 +116,11 @@
 
 /* ---- Page ---- */
 .wtc-page {
-  /* Use explicit paper dimensions if set, otherwise fall back to calculated */
-  width: var(--wtc-paper-width, var(--wtc-page-width));
-  height: var(--wtc-paper-height, var(--wtc-page-height));
+  /* Page dimensions derived from grid-width/grid-height (which are auto-calculated
+     from paper dimensions via gujiAutoLayout). Note: --wtc-paper-width is the full
+     SPREAD width (both half-pages), but each .wtc-page is a single half-page. */
+  width: var(--wtc-page-width);
+  height: var(--wtc-page-height);
   background: var(--wtc-page-background);
   margin: 20px auto;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
@@ -172,7 +175,7 @@
   /* Set width to exact nCols to ensure:
      1. All column grid lines (界栏) are rendered via background-image
      2. Content flows right-to-left as expected in vertical-rl */
-  width: calc(var(--wtc-n-cols) * var(--wtc-font-size) * var(--wtc-line-height));
+  width: calc(var(--wtc-n-cols) * var(--wtc-grid-width));
   /* Align to the right using margin-left: auto */
   margin-left: auto;
 }
@@ -200,7 +203,7 @@
   height: 100%;
   overflow: hidden;
   /* 乌丝栏: inner column border lines via background-size for reliable rendering */
-  --wtc-col-width: calc(var(--wtc-font-size) * var(--wtc-line-height));
+  --wtc-col-width: var(--wtc-grid-width);
   background-origin: padding-box;
   background-image: repeating-linear-gradient(to left,
       transparent 0,
@@ -332,7 +335,7 @@
   text-orientation: upright;
   flex-shrink: 0;
   /* Each sub-column = half of one main text column physical width */
-  width: calc(var(--wtc-font-size) * var(--wtc-line-height) / 2);
+  width: calc(var(--wtc-grid-width) / 2);
 }
 
 /* Flow mode: for jiazhu with nested commands */

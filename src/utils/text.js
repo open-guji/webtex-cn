@@ -130,6 +130,15 @@ export function parseColor(colorStr) {
  * - 1mm = 2.83465pt
  * - 1in = 72pt
  */
+// Unit → pt conversion factors
+const ptConversions = {
+  'cm': 28.3465,
+  'mm': 2.83465,
+  'in': 72,
+  'px': 0.75,  // 1px = 0.75pt (CSS default)
+  'pt': 1,
+};
+
 export function convertToPt(value) {
   if (!value) return '0pt';
   const str = String(value).trim();
@@ -144,18 +153,28 @@ export function convertToPt(value) {
   const num = parseFloat(match[1]);
   const unit = match[2];
 
-  // Convert to pt
-  const conversions = {
-    'cm': 28.3465,
-    'mm': 2.83465,
-    'in': 72,
-    'px': 0.75,  // 1px = 0.75pt (CSS default)
-    'pt': 1,
-  };
-
-  const factor = conversions[unit];
+  const factor = ptConversions[unit];
   if (factor === undefined) return str; // Unknown unit, return as-is
 
   const ptValue = num * factor;
   return `${ptValue.toFixed(2)}pt`;
+}
+
+/**
+ * Parse a CSS dimension string to a numeric value in pt.
+ * Returns 0 for invalid or empty input.
+ */
+export function parseToPtValue(value) {
+  if (!value) return 0;
+  const str = String(value).trim();
+
+  const match = str.match(/^([0-9.]+)\s*([a-z]*)$/);
+  if (!match) return 0;
+
+  const num = parseFloat(match[1]);
+  if (isNaN(num)) return 0;
+
+  const unit = match[2] || 'pt';
+  const factor = ptConversions[unit];
+  return factor !== undefined ? num * factor : 0;
 }

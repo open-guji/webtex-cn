@@ -8,7 +8,7 @@
 import { parse } from './parser/index.js';
 import { layout } from './layout/grid-layout.js';
 import { HTMLRenderer } from './renderer/html-renderer.js';
-import { resolveConfig } from './model/config.js';
+import { resolveConfig, cssOverridesToStyleAttr } from './model/config.js';
 import { escapeHTML } from './utils/text.js';
 
 /**
@@ -30,10 +30,11 @@ function runPipeline(texSource, options = {}) {
 
 /**
  * Internal helper: wrap page HTMLs in wtc-page divs.
+ * setupStyles is applied to .wtc-page so CSS variables cascade to all children.
  */
-function wrapPages(pageHTMLs, templateId) {
+function wrapPages(pageHTMLs, templateId, setupStyles = '') {
   return pageHTMLs.map(html =>
-    `<div class="wtc-page" data-template="${templateId}">${html}</div>`
+    `<div class="wtc-page" data-template="${templateId}"${setupStyles}>${html}</div>`
   ).join('\n');
 }
 
@@ -47,7 +48,8 @@ function wrapPages(pageHTMLs, templateId) {
  */
 export function renderToHTML(texSource, options = {}) {
   const { layoutResult, pageHTMLs } = runPipeline(texSource, options);
-  return wrapPages(pageHTMLs, layoutResult.templateId);
+  const setupStyles = cssOverridesToStyleAttr(layoutResult.config.cssOverrides);
+  return wrapPages(pageHTMLs, layoutResult.templateId, setupStyles);
 }
 
 /**
@@ -61,7 +63,8 @@ export function renderToHTML(texSource, options = {}) {
 export function renderToPage(texSource, options = {}) {
   const { ast, layoutResult, pageHTMLs } = runPipeline(texSource, options);
   const templateId = layoutResult.templateId;
-  const pagesContent = wrapPages(pageHTMLs, templateId);
+  const setupStyles = cssOverridesToStyleAttr(layoutResult.config.cssOverrides);
+  const pagesContent = wrapPages(pageHTMLs, templateId, setupStyles);
   return `<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -100,7 +103,8 @@ export function renderToDOM(texSource, container, options = {}) {
   if (cssBasePath && typeof document !== 'undefined') {
     setTemplate(layoutResult.templateId, cssBasePath);
   }
-  el.innerHTML = wrapPages(pageHTMLs, layoutResult.templateId);
+  const setupStyles = cssOverridesToStyleAttr(layoutResult.config.cssOverrides);
+  el.innerHTML = wrapPages(pageHTMLs, layoutResult.templateId, setupStyles);
 }
 
 /**

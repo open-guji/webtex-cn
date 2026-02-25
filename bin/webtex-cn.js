@@ -19,7 +19,8 @@ async function loadLib() {
   const { layout } = await import(join(srcDir, 'layout', 'grid-layout.js'));
   const { HTMLRenderer } = await import(join(srcDir, 'renderer', 'html-renderer.js'));
   const { extractTemplateName } = await import(join(srcDir, 'parser', 'macros.js'));
-  return { parse, layout, HTMLRenderer, extractTemplateName };
+  const { cssOverridesToStyleAttr } = await import(join(srcDir, 'model', 'config.js'));
+  return { parse, layout, HTMLRenderer, extractTemplateName, cssOverridesToStyleAttr };
 }
 
 /**
@@ -87,7 +88,7 @@ async function buildCommand(inputPath, outputDir) {
     process.exit(1);
   }
 
-  const { parse, layout, HTMLRenderer, extractTemplateName } = await loadLib();
+  const { parse, layout, HTMLRenderer, extractTemplateName, cssOverridesToStyleAttr } = await loadLib();
   const texSource = readFileSync(resolve(inputPath), 'utf8');
   const cfgSource = loadCfgSource(texSource, inputPath, extractTemplateName);
   const { ast, warnings } = parse(texSource, cfgSource ? { cfgSource } : {});
@@ -100,9 +101,10 @@ async function buildCommand(inputPath, outputDir) {
   const layoutResult = layout(ast);
   const renderer = new HTMLRenderer(ast);
   const templateId = layoutResult.templateId;
+  const setupStyles = cssOverridesToStyleAttr(layoutResult.config.cssOverrides);
   const pageHTMLs = renderer.renderFromLayout(layoutResult);
   const pagesContent = pageHTMLs.map(h =>
-    `<div class="wtc-page" data-template="${templateId}">${h}</div>`
+    `<div class="wtc-page" data-template="${templateId}"${setupStyles}>${h}</div>`
   ).join('\n');
 
   const html = `<!DOCTYPE html>
@@ -194,7 +196,7 @@ async function serveCommand(inputPath, port, pdfRefPath = null) {
     }
   }
 
-  const { parse, layout, HTMLRenderer, extractTemplateName } = await loadLib();
+  const { parse, layout, HTMLRenderer, extractTemplateName, cssOverridesToStyleAttr } = await loadLib();
   const templatesDir = join(srcDir, 'templates');
 
   const server = createServer((req, res) => {
@@ -217,6 +219,7 @@ async function serveCommand(inputPath, port, pdfRefPath = null) {
       const layoutResult = layout(ast);
       const renderer = new HTMLRenderer(ast);
       const templateId = layoutResult.templateId;
+      const setupStyles = cssOverridesToStyleAttr(layoutResult.config.cssOverrides);
       const pageHTMLs = renderer.renderFromLayout(layoutResult);
 
       // Parse page parameter
@@ -238,7 +241,7 @@ async function serveCommand(inputPath, port, pdfRefPath = null) {
 
         const texDisplay = `<pre class="tex-source">${texSource.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
 
-        const htmlDisplay = `<div class="wtc-page" data-template="${templateId}">${pageHTMLs[pageIndex]}</div>`;
+        const htmlDisplay = `<div class="wtc-page" data-template="${templateId}"${setupStyles}>${pageHTMLs[pageIndex]}</div>`;
 
         const pdfDisplay = pdfPageFile
           ? `<img src="/pdf-page/${pdfPageFile}" alt="PDF Page ${requestedPage}" style="max-width: 100%; border: 1px solid #ccc;">`
@@ -297,7 +300,7 @@ ${navigation}
       } else {
         // Normal single-page mode
         const pagesContent = pageHTMLs.map(h =>
-          `<div class="wtc-page" data-template="${templateId}">${h}</div>`
+          `<div class="wtc-page" data-template="${templateId}"${setupStyles}>${h}</div>`
         ).join('\n');
 
         html = `<!DOCTYPE html>

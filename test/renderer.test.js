@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parse } from '../src/parser/index.js';
 import { layout } from '../src/layout/grid-layout.js';
 import { HTMLRenderer } from '../src/renderer/html-renderer.js';
-import { renderToPage } from '../src/index.js';
+import { renderToPage, renderToHTML } from '../src/index.js';
 
 function renderTex(tex) {
   const { ast } = parse(tex);
@@ -156,7 +156,7 @@ describe('HTMLRenderer', () => {
   });
 
   it('applies setup command overrides as CSS variables', () => {
-    const html = renderTex('\\contentSetup{font-size=18px}\\begin{document}\\begin{正文}text\\end{正文}\\end{document}');
+    const html = renderToHTML('\\contentSetup{font-size=18px}\\begin{document}\\begin{正文}text\\end{正文}\\end{document}');
     expect(html).toContain('--wtc-font-size: 18px');
   });
 

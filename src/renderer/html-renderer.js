@@ -7,7 +7,6 @@
 
 import { NodeType } from '../model/nodes.js';
 import { resolveTemplateId, getGridConfig } from '../config/templates.js';
-import { cssOverridesToStyleAttr } from '../model/config.js';
 import { getPlainText, escapeHTML, splitChildrenAtCharCount, convertToPt } from '../utils/text.js';
 import { splitJiazhuMulti } from '../utils/jiazhu.js';
 import { getJudouRichText } from '../utils/judou.js';
@@ -37,7 +36,6 @@ export class HTMLRenderer {
   renderFromLayout(layoutResult) {
     const config = layoutResult.config;
     this.punctMode = config.punctMode || this.punctMode;
-    const setupStyles = cssOverridesToStyleAttr(config.cssOverrides);
     const defaultBanxin = this.renderBanxinFromMeta(config.meta);
     const digitalModeAttr = layoutResult.isDigitalMode ? ' data-digital-mode="true"' : '';
 
@@ -48,11 +46,11 @@ export class HTMLRenderer {
     if (layoutResult.frontMatter) {
       for (const fm of layoutResult.frontMatter) {
         if (fm.type === 'cover') {
-          pages.push(this.renderCover(fm.node, setupStyles));
+          pages.push(this.renderCover(fm.node));
         } else if (fm.type === 'titlePage') {
-          pages.push(this.renderTitlePage(fm.node, setupStyles));
+          pages.push(this.renderTitlePage(fm.node));
         } else if (fm.type === 'blankPage') {
-          pages.push(this.renderBlankPage(fm.node, setupStyles));
+          pages.push(this.renderBlankPage(fm.node));
         }
       }
     }
@@ -73,12 +71,12 @@ export class HTMLRenderer {
       const banxin = page.meta?.banxin ? this.renderBanxinFromMeta(page.meta) : defaultBanxin;
 
       // Right half-page: content on right, banxin on left
-      pages.push(`<div class="wtc-spread wtc-spread-right"${setupStyles}${digitalModeAttr}>
+      pages.push(`<div class="wtc-spread wtc-spread-right"${digitalModeAttr}>
 ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">${rightHTML}</div></div></div>${banxin}
 </div>`);
 
       // Left half-page: content on left, banxin on right
-      pages.push(`<div class="wtc-spread wtc-spread-left"${setupStyles}${digitalModeAttr}>
+      pages.push(`<div class="wtc-spread wtc-spread-left"${digitalModeAttr}>
 <div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content">${leftHTML}</div></div></div>${banxin}
 </div>`);
     }
@@ -87,11 +85,11 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     if (layoutResult.backMatter) {
       for (const bm of layoutResult.backMatter) {
         if (bm.type === 'cover') {
-          pages.push(this.renderCover(bm.node, setupStyles));
+          pages.push(this.renderCover(bm.node));
         } else if (bm.type === 'titlePage') {
-          pages.push(this.renderTitlePage(bm.node, setupStyles));
+          pages.push(this.renderTitlePage(bm.node));
         } else if (bm.type === 'blankPage') {
-          pages.push(this.renderBlankPage(bm.node, setupStyles));
+          pages.push(this.renderBlankPage(bm.node));
         }
       }
     }
@@ -252,7 +250,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
   /**
    * Render a cover page (full-page, no grid).
    */
-  renderCover(node, setupStyles = '') {
+  renderCover(node) {
     const opts = node.options || {};
     const styles = [];
 
@@ -299,22 +297,7 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
       }
     }
 
-    // Merge setupStyles (from cssOverrides) and cover-specific styles
-    let styleAttr = '';
-    if (setupStyles) {
-      // setupStyles is like ' style="--wtc-font-family: TW-Kai"'
-      // Extract the content between quotes and merge
-      const match = setupStyles.match(/style="([^"]*)"/);
-      if (match && styles.length > 0) {
-        styleAttr = ` style="${match[1]}; ${styles.join('; ')}"`;
-      } else if (match) {
-        styleAttr = setupStyles;
-      } else if (styles.length > 0) {
-        styleAttr = ` style="${styles.join('; ')}"`;
-      }
-    } else if (styles.length > 0) {
-      styleAttr = ` style="${styles.join('; ')}"`;
-    }
+    const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
 
     return `<div class="wtc-spread wtc-spread-cover"${styleAttr}>
 ${floatsHTML.join('\n')}${contentHTML.join('')}
@@ -324,7 +307,7 @@ ${floatsHTML.join('\n')}${contentHTML.join('')}
   /**
    * Render a title page (full-page with vertical text lines).
    */
-  renderTitlePage(node, setupStyles = '') {
+  renderTitlePage(node) {
     const opts = node.options || {};
     let containerStyle = '';
 
@@ -349,7 +332,7 @@ ${floatsHTML.join('\n')}${contentHTML.join('')}
         linesHTML.push(this.renderLine(child));
       }
     }
-    return `<div class="wtc-spread wtc-spread-title-page"${setupStyles}${containerStyle ? ` style="${containerStyle}"` : ''}>
+    return `<div class="wtc-spread wtc-spread-title-page"${containerStyle ? ` style="${containerStyle}"` : ''}>
 ${linesHTML.join('\n')}
 </div>`;
   }
@@ -711,7 +694,7 @@ ${linesHTML.join('\n')}
   /**
    * Render a blank page (no grid, no banxin, floating textboxes only).
    */
-  renderBlankPage(node, setupStyles = '') {
+  renderBlankPage(node) {
     const floatsHTML = [];
     const contentHTML = [];
     for (const child of node.children) {
@@ -722,7 +705,7 @@ ${linesHTML.join('\n')}
         contentHTML.push(this.renderNode(child));
       }
     }
-    return `<div class="wtc-spread wtc-spread-blank"${setupStyles}>
+    return `<div class="wtc-spread wtc-spread-blank">
 ${floatsHTML.join('\n')}${contentHTML.join('')}
 </div>`;
   }
