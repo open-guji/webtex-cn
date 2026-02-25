@@ -344,12 +344,13 @@
   width: calc(var(--wtc-grid-width) / 2);
 }
 
-/* Center-aligned jiazhu: vertically center each column content */
-.wtc-jiazhu-center .wtc-jiazhu-col {
-  display: flex;
-  flex-direction: column;
+/* Center-aligned jiazhu: horizontally center the dual columns in vertical-rl mode
+   In vertical-rl, the inline axis is vertical (top-to-bottom), and the block axis
+   is horizontal (right-to-left). flex-direction:column makes items flow along the
+   block axis (right-to-left). justify-content controls alignment along the main axis
+   (block/horizontal), so we use 'center' to horizontally center the two columns. */
+.wtc-jiazhu-center {
   justify-content: center;
-  align-items: center;
 }
 
 /* Flow mode: for jiazhu with nested commands */
@@ -400,8 +401,9 @@
   display: inline-block;
   writing-mode: vertical-rl;
   text-orientation: upright;
-  overflow: hidden;
+  overflow: visible;
   inline-size: calc(var(--wtc-textbox-height, 1) * var(--wtc-grid-height));
+  font-family: var(--wtc-font-family);
 }
 
 .wtc-textbox-floating {
