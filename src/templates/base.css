@@ -39,6 +39,10 @@
   --wtc-border-padding-top: 8px;
   --wtc-border-padding-bottom: 8px;
 
+  /* Display thickness: ensure thin borders are at least 1px to prevent
+     subpixel rounding issues that cause lines to disappear at certain zoom levels */
+  --wtc-border-thickness-display: max(1px, var(--wtc-border-thickness));
+
   /* Background */
   --wtc-page-background: #fff;
 
@@ -168,7 +172,7 @@
 }
 
 .wtc-content-border>.wtc-content {
-  border: var(--wtc-border-thickness) solid var(--wtc-border-color);
+  border: var(--wtc-border-thickness-display) solid var(--wtc-border-color);
   padding: var(--wtc-border-padding-top) 0 var(--wtc-border-padding-bottom) 0;
   /* In vertical-rl: height = column height (from parent), width = number of columns */
   height: 100%;
@@ -202,13 +206,15 @@
   text-align: start;
   height: 100%;
   overflow: hidden;
-  /* 乌丝栏: inner column border lines via background-size for reliable rendering */
+  /* 乌丝栏: inner column border lines via background-size for reliable rendering.
+     Use --wtc-border-thickness-display to ensure lines are always at least 1px wide
+     at any zoom level, preventing disappearing lines caused by subpixel rounding. */
   --wtc-col-width: var(--wtc-grid-width);
   background-origin: padding-box;
   background-image: repeating-linear-gradient(to left,
       transparent 0,
-      transparent calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
-      var(--wtc-border-color) calc(var(--wtc-col-width) - max(var(--wtc-border-thickness), 0.5px)),
+      transparent calc(var(--wtc-col-width) - var(--wtc-border-thickness-display)),
+      var(--wtc-border-color) calc(var(--wtc-col-width) - var(--wtc-border-thickness-display)),
       var(--wtc-border-color) var(--wtc-col-width));
 }
 
@@ -218,8 +224,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-left: var(--wtc-border-thickness) solid var(--wtc-border-color);
-  border-right: var(--wtc-border-thickness) solid var(--wtc-border-color);
+  border-left: var(--wtc-border-thickness-display) solid var(--wtc-border-color);
+  border-right: var(--wtc-border-thickness-display) solid var(--wtc-border-color);
   flex-shrink: 0;
   position: relative;
 }
@@ -257,8 +263,8 @@
   flex: 0 0 calc(var(--wtc-banxin-middle-ratio) * 100%);
   font-size: var(--wtc-banxin-chapter-font-size);
   color: var(--wtc-font-color);
-  border-top: var(--wtc-border-thickness) solid var(--wtc-border-color);
-  border-bottom: var(--wtc-border-thickness) solid var(--wtc-border-color);
+  border-top: var(--wtc-border-thickness-display) solid var(--wtc-border-color);
+  border-bottom: var(--wtc-border-thickness-display) solid var(--wtc-border-color);
 }
 
 .wtc-banxin-chapter {
