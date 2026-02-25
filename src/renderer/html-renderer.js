@@ -211,7 +211,8 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
   renderLayoutItem(item) {
     if (item.jiazhuComplexSegment && item.node.type === NodeType.JIAZHU) {
       const align = item.node.options?.align || 'outward';
-      return this.renderJiazhuComplexSegment(item.jiazhuComplexSegment, item.autoBalance, item.jiazhuComplexMaxPerCol, align);
+      const options = item.node.options || {};
+      return this.renderJiazhuComplexSegment(item.jiazhuComplexSegment, item.autoBalance, item.jiazhuComplexMaxPerCol, align, options);
     }
     if (item.jiazhuSegments && item.node.type === NodeType.JIAZHU) {
       return this.renderJiazhuFromSegments(item.node, item.jiazhuSegments);
@@ -247,8 +248,15 @@ ${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-b
     const align = node.options?.align || 'outward';
     const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
 
+    // Add inline styles for font-size and other options
+    const opts = node.options || {};
+    const styles = [];
+    if (opts['font-size']) styles.push(`font-size: ${opts['font-size']}`);
+    if (opts['color']) styles.push(`color: ${this.parseColor(opts['color'])}`);
+    const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+
     return segments.map(({ col1, col2 }) =>
-      `<span class="wtc-jiazhu${alignClass}"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
+      `<span class="wtc-jiazhu${alignClass}"${styleAttr}><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
     ).join('');
   }
 
@@ -583,8 +591,15 @@ ${linesHTML.join('\n')}
     // Add align class if specified
     const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
 
+    // Add inline styles for font-size and other options
+    const opts = node.options || {};
+    const styles = [];
+    if (opts['font-size']) styles.push(`font-size: ${opts['font-size']}`);
+    if (opts['color']) styles.push(`color: ${this.parseColor(opts['color'])}`);
+    const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+
     return segments.map(({ col1, col2 }) =>
-      `<span class="wtc-jiazhu${alignClass}"><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
+      `<span class="wtc-jiazhu${alignClass}"${styleAttr}><span class="wtc-jiazhu-col">${this.renderRichChars(col1)}</span><span class="wtc-jiazhu-col">${this.renderRichChars(col2)}</span></span>`
     ).join('');
   }
 
@@ -630,14 +645,21 @@ ${linesHTML.join('\n')}
     const align = node.options?.align || 'outward';
     const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
 
-    return `<span class="wtc-jiazhu${alignClass}"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
+    // Add inline styles for font-size and other options
+    const opts = node.options || {};
+    const styles = [];
+    if (opts['font-size']) styles.push(`font-size: ${opts['font-size']}`);
+    if (opts['color']) styles.push(`color: ${this.parseColor(opts['color'])}`);
+    const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+
+    return `<span class="wtc-jiazhu${alignClass}"${styleAttr}><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 
   /**
    * Render a complex jiazhu segment (from layout walkJiazhuComplex).
    * Each segment is a slice of children between taitou boundaries.
    */
-  renderJiazhuComplexSegment(children, autoBalance = true, segMaxPerCol, align = 'outward') {
+  renderJiazhuComplexSegment(children, autoBalance = true, segMaxPerCol, align = 'outward', options = {}) {
     const renderChild = (c) => {
       if (c.type === NodeType.TEXT && this.punctMode === 'judou') {
         const richChars = getJudouRichText(c.value || '', 'judou');
@@ -666,7 +688,13 @@ ${linesHTML.join('\n')}
     // Add align class if specified
     const alignClass = align === 'center' ? ' wtc-jiazhu-center' : align === 'inward' ? ' wtc-jiazhu-inward' : '';
 
-    return `<span class="wtc-jiazhu${alignClass}"><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
+    // Add inline styles for font-size and other options
+    const styles = [];
+    if (options['font-size']) styles.push(`font-size: ${options['font-size']}`);
+    if (options['color']) styles.push(`color: ${this.parseColor(options['color'])}`);
+    const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')}"` : '';
+
+    return `<span class="wtc-jiazhu${alignClass}"${styleAttr}><span class="wtc-jiazhu-col">${col1HTML}</span><span class="wtc-jiazhu-col">${col2HTML}</span></span>`;
   }
 
   renderSidenote(node) {
