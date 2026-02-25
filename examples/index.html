@@ -342,9 +342,13 @@
           currentPage = 1;
         }
 
-        updatePager(currentPage);
-        updateScale();
-        status.textContent = '渲染完成';
+        // Only update pager if we have source or if we are intentional about clearing it.
+        // During initial load, `source` might be empty for a brief moment before loadTeX finishes.
+        if (source.trim() || totalPages > 0) {
+          updatePager(currentPage);
+          updateScale();
+          status.textContent = '渲染完成';
+        }
       } catch (err) {
         status.textContent = '渲染错误: ' + err.message;
         console.error(err);
@@ -447,7 +451,9 @@
       const link = document.getElementById('template-css');
       link.href = '../src/templates/' + name + '.css';
       link.onload = function () {
-        renderPreview(true);
+        if (texSource.value.trim()) {
+          renderPreview(true);
+        }
       };
     }
 
