@@ -68,16 +68,20 @@ export class HTMLRenderer {
       const leftHTML = left.html;
       const floatsHTML = page.floats.map(f => this.renderNode(f)).join('\n');
 
+      // Compute border protrusions for columns with negative indent
+      const rightProtrusionHTML = this.renderProtrusions(this.computeProtrusions(rightItems, false));
+      const leftProtrusionHTML = this.renderProtrusions(this.computeProtrusions(leftItems, true));
+
       const banxin = page.meta?.banxin ? this.renderBanxinFromMeta(page.meta) : defaultBanxin;
 
       // Right half-page: content on right, banxin on left
       pages.push(`<div class="wtc-spread wtc-spread-right"${digitalModeAttr}>
-${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border"><div class="wtc-content">${rightHTML}</div></div></div>${banxin}
+${floatsHTML}<div class="wtc-half-page wtc-half-right"><div class="wtc-content-border">${rightProtrusionHTML}<div class="wtc-content">${rightHTML}</div></div></div>${banxin}
 </div>`);
 
       // Left half-page: content on left, banxin on right
       pages.push(`<div class="wtc-spread wtc-spread-left"${digitalModeAttr}>
-<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border"><div class="wtc-content">${leftHTML}</div></div></div>${banxin}
+<div class="wtc-half-page wtc-half-left"><div class="wtc-content-border">${leftProtrusionHTML}<div class="wtc-content">${leftHTML}</div></div></div>${banxin}
 </div>`);
     }
 
@@ -957,5 +961,76 @@ ${floatsHTML.join('\n')}${contentHTML.join('')}
       }
     }
     return style;
+  }
+
+  /**
+   * Scan layout items for JIAZHU with explicit cols containing negative SET_INDENT.
+   * Returns a Map<halfPageCol, protrusionRows> for columns that need border protrusion.
+   * @param {Array} items - layout items for one half-page
+   * @param {boolean} isLeftHalf - true if these are left half-page items
+   */
+  computeProtrusions(items, isLeftHalf) {
+    const protrusionMap = new Map();
+
+    for (const item of items) {
+      if (item.node.type !== NodeType.JIAZHU) continue;
+      const hasExplicitCols = item.node.children.some(c => c.type === NodeType.JIAZHU_COL);
+      if (!hasExplicitCols) continue;
+
+      let minIndent = 0;
+      for (const child of item.node.children) {
+        if (child.type === NodeType.JIAZHU_COL) {
+          for (const c of child.children) {
+            if (c.type === NodeType.SET_INDENT) {
+              const n = parseInt(c.value, 10) || 0;
+              if (n < minIndent) minIndent = n;
+            }
+          }
+        }
+      }
+
+      if (minIndent < 0) {
+        const halfPageCol = isLeftHalf ? item.col - this.nCols : item.col;
+        const rows = Math.abs(minIndent);
+        const existing = protrusionMap.get(halfPageCol) || 0;
+        protrusionMap.set(halfPageCol, Math.max(existing, rows));
+      }
+    }
+
+    return protrusionMap;
+  }
+
+  /**
+   * Render border protrusion elements for columns with negative indent.
+   * Merges adjacent columns with the same protrusion level.
+   * @param {Map<number, number>} protrusionMap - halfPageCol -> protrusion rows
+   * @returns {string} HTML string with protrusion div elements
+   */
+  renderProtrusions(protrusionMap) {
+    if (protrusionMap.size === 0) return '';
+
+    const sorted = [...protrusionMap.entries()].sort((a, b) => a[0] - b[0]);
+
+    // Merge consecutive columns with same protrusion level
+    const regions = [];
+    let current = { startCol: sorted[0][0], endCol: sorted[0][0], rows: sorted[0][1] };
+
+    for (let i = 1; i < sorted.length; i++) {
+      const [col, rows] = sorted[i];
+      if (col === current.endCol + 1 && rows === current.rows) {
+        current.endCol = col;
+      } else {
+        regions.push(current);
+        current = { startCol: col, endCol: col, rows };
+      }
+    }
+    regions.push(current);
+
+    let html = '';
+    for (const region of regions) {
+      const colSpan = region.endCol - region.startCol + 1;
+      html += `<div class="wtc-border-protrusion" style="--wtc-protrusion-col: ${region.startCol}; --wtc-protrusion-rows: ${region.rows}; --wtc-protrusion-cols: ${colSpan}"><div class="wtc-border-protrusion-inner"></div></div>`;
+    }
+    return html;
   }
 }

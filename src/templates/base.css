@@ -169,6 +169,7 @@
   border: var(--wtc-outer-border-thickness) solid var(--wtc-border-color);
   padding: var(--wtc-outer-border-sep);
   height: 100%;
+  position: relative;
 }
 
 .wtc-content-border>.wtc-content {
@@ -192,6 +193,79 @@
   width: auto;
   min-width: auto;
   overflow: visible;
+}
+
+/* ---- Border Protrusion (负缩进边框突出) ---- */
+/* When negative indent (\缩进[-N]) is used inside \双列, content overflows above
+   the content area. The protrusion extends both inner and outer borders upward.
+   Positioned within .wtc-content-border (position: relative). */
+.wtc-border-protrusion {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  box-sizing: border-box;
+
+  /* Width: column span + inner border + outer gap + outer border on both sides */
+  width: calc(
+    var(--wtc-protrusion-cols) * var(--wtc-grid-width)
+    + 2 * var(--wtc-border-thickness-display)
+    + 2 * var(--wtc-outer-border-sep)
+    + 2 * var(--wtc-outer-border-thickness)
+  );
+
+  /* Height: protrusion content + border-padding-top + inner border + outer gap + outer border */
+  height: calc(
+    var(--wtc-protrusion-rows) * var(--wtc-grid-height)
+    + var(--wtc-border-padding-top)
+    + var(--wtc-border-thickness-display)
+    + var(--wtc-outer-border-sep)
+    + var(--wtc-outer-border-thickness)
+  );
+
+  /* Horizontal: align protrusion's inner content with the grid column.
+     right = col * grid-width - outer-border-thickness
+     (the outer border overlaps with parent's border at col boundary) */
+  right: calc(
+    var(--wtc-protrusion-col) * var(--wtc-grid-width)
+    - var(--wtc-outer-border-thickness)
+  );
+
+  /* Vertical: extend above parent's top edge.
+     top = -(rows * grid-height + outer-border-thickness) */
+  top: calc(
+    -1 * (
+      var(--wtc-protrusion-rows) * var(--wtc-grid-height)
+      + var(--wtc-outer-border-thickness)
+    )
+  );
+
+  /* Outer thick border on 3 sides (bottom merges with existing border) */
+  border-left: var(--wtc-outer-border-thickness) solid var(--wtc-border-color);
+  border-right: var(--wtc-outer-border-thickness) solid var(--wtc-border-color);
+  border-top: var(--wtc-outer-border-thickness) solid var(--wtc-border-color);
+  border-bottom: none;
+
+  /* Gap between outer and inner borders */
+  padding: var(--wtc-outer-border-sep) var(--wtc-outer-border-sep) 0;
+
+  /* Transparent background: the original horizontal borders of .wtc-content-border
+     and .wtc-content naturally form the "bottom" of the protrusion box,
+     so no masking is needed. Overflow content shows through. */
+  background: transparent;
+}
+
+.wtc-border-protrusion-inner {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+
+  /* Inner thin border on 3 sides */
+  border-left: var(--wtc-border-thickness-display) solid var(--wtc-border-color);
+  border-right: var(--wtc-border-thickness-display) solid var(--wtc-border-color);
+  border-top: var(--wtc-border-thickness-display) solid var(--wtc-border-color);
+  border-bottom: none;
+
+  background: transparent;
 }
 
 /* ---- Content Area (竖排) ---- */
