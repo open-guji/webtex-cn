@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.1.4] - 2026-03-19
+
+### Added
+- 封面、书名页环境（\封面、\书名页）和 \行 命令
+- 空白页环境、浮动文本框、\样式 命令、\臣 别名
+- 数字化模式（ltc-guji-digital）检测与负缩进支持
+- 版心（Banxin）、DigitalContent 及数字化布局命令
+- 夹注 font-size、color 参数和 align=center 支持
+- 右小列/左小列 显式列布局命令
+- HTML 渲染与 PDF 尺寸/布局对齐
+- serve 命令三栏对比视图
+- 四库目录对比工作区示例
+
+### Fixed
+- 封面页布局、浮动文本框缩放与位置钳制
+- 数字化模式列溢出与布局控制
+- 列网格线在特定缩放级别下消失的问题
+- vertical-rl 模式下 line-height 与 grid-width 自动同步
+- 列网格线按从右到左顺序正确渲染
+- tokenizer 换行折叠和 CSS 布局修复
+- \臣 解析为「臣」文本及 readBraceGroup 命令重建
+- 数字化模式 NEWLINE 处理中 currentRow 重置问题
+
+
 ## [0.1.1] - 2026-02-13
 
 ### Added
